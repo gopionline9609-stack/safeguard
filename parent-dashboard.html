@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1.0">
+
+<title>SafeGuard — Parent Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+:root{
+
+    --bg:#030712;
+
+    --card:
+        rgba(12,20,38,.78);
+
+    --border:
+        rgba(120,170,255,.14);
+
+    --blue:#35a7ff;
+
+    --cyan:#35e6ff;
+
+    --purple:#8b6cff;
+
+    --green:#35e69b;
+
+    --red:#ff3158;
+
+    --yellow:#ffc857;
+
+    --text:#f5f8ff;
+
+    --muted:#8996ad;
+}
+
+body{
+
+    min-height:100vh;
+
+    font-family:
+        Inter,
+        Arial,
+        sans-serif;
+
+    color:var(--text);
+
+    background:
+
+        radial-gradient(
+            circle at 5% 5%,
+            rgba(0,140,255,.18),
+            transparent 28%
+        ),
+
+        radial-gradient(
+            circle at 95% 10%,
+            rgba(125,65,255,.18),
+            transparent 28%
+        ),
+
+        radial-gradient(
+            circle at 50% 100%,
+            rgba(0,220,255,.10),
+            transparent 35%
+        ),
+
+        var(--bg);
+
+    overflow-x:hidden;
+}
+
+
+body::before,
+body::after{
+
+    content:"";
+
+    position:fixed;
+
+    width:330px;
+    height:330px;
+
+    border-radius:50%;
+
+    filter:blur(105px);
+
+    opacity:.15;
+
+    pointer-events:none;
+
+    z-index:-1;
+
+    animation:
+        floatGlow
+        10s
+        ease-in-out
+        infinite
+        alternate;
+}
+
+body::before{
+
+    background:#087cff;
+
+    left:-150px;
+    top:8%;
+}
+
+body::after{
+
+    background:#733cff;
+
+    right:-150px;
+    bottom:5%;
+
+    animation-delay:3s;
+}
+
+@keyframes floatGlow{
+
+    from{
+        transform:translate(0,0);
+    }
+
+    to{
+        transform:translate(45px,-35px);
+    }
+}
+
+
+/* HEADER */
+
+.header{
+
+    position:sticky;
+
+    top:0;
+
+    z-index:100;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:13px 5%;
+
+    background:
+        rgba(3,7,18,.76);
+
+    backdrop-filter:
+        blur(22px);
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,.06);
+}
+
+.logo{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+}
+
+.logo-icon{
+
+    width:43px;
+    height:43px;
+
+    display:grid;
+
+    place-items:center;
+
+    border-radius:14px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #147eff,
+            #00d9ff
+        );
+
+    box-shadow:
+        0 0 28px
+        rgba(0,190,255,.40);
+
+    font-size:22px;
+}
+
+.logo h1{
+    font-size:18px;
+}
+
+.logo small{
+
+    display:block;
+
+    color:#718099;
+
+    font-size:9px;
+
+    margin-top:2px;
+}
+
+.header-right{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+}
+
+.parent-badge{
+
+    padding:7px 12px;
+
+    border-radius:20px;
+
+    color:#d9d0ff;
+
+    font-size:10px;
+
+    background:
+        rgba(139,108,255,.11);
+
+    border:
+        1px solid
+        rgba(139,108,255,.25);
+}
+
+.logout{
+
+    border:
+        1px solid
+        rgba(255,255,255,.10);
+
+    background:
+        rgba(255,255,255,.045);
+
+    color:#dce6f8;
+
+    padding:9px 14px;
+
+    border-radius:11px;
+
+    cursor:pointer;
+
+    transition:.25s;
+}
+
+.logout:hover{
+
+    background:
+        rgba(255,255,255,.10);
+
+    transform:translateY(-2px);
+}
+
+
+/* MAIN */
+
+.container{
+
+    width:min(1120px,92%);
+
+    margin:auto;
+
+    padding:30px 0 60px;
+}
+
+.hero{
+
+    padding:28px 0 25px;
+
+    animation:
+        fadeUp
+        .7s
+        ease;
+}
+
+.hero h2{
+
+    font-size:
+        clamp(32px,6vw,52px);
+
+    line-height:1.05;
+
+    background:
+        linear-gradient(
+            90deg,
+            #fff,
+            #7bdeff,
+            #a58aff
+        );
+
+    -webkit-background-clip:text;
+
+    background-clip:text;
+
+    color:transparent;
+}
+
+.hero p{
+
+    max-width:700px;
+
+    margin-top:13px;
+
+    color:var(--muted);
+
+    font-size:13px;
+
+    line-height:1.65;
+}
+
+@keyframes fadeUp{
+
+    from{
+
+        opacity:0;
+
+        transform:
+            translateY(20px);
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:none;
+    }
+}
+
+
+/* STATUS */
+
+.status-grid{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap:15px;
+
+    margin-bottom:18px;
+}
+
+.status-card{
+
+    padding:18px;
+
+    border-radius:20px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(17,29,53,.82),
+            rgba(7,13,27,.72)
+        );
+
+    border:
+        1px solid
+        var(--border);
+
+    animation:
+        fadeUp
+        .7s
+        ease;
+}
+
+.status-top{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+}
+
+.status-icon{
+
+    width:38px;
+    height:38px;
+
+    display:grid;
+
+    place-items:center;
+
+    border-radius:12px;
+
+    background:
+        rgba(50,160,255,.10);
+
+    border:
+        1px solid
+        rgba(70,180,255,.18);
+
+    font-size:18px;
+}
+
+.status-dot{
+
+    width:9px;
+    height:9px;
+
+    border-radius:50%;
+
+    background:#35e69b;
+
+    box-shadow:
+        0 0 12px
+        rgba(53,230,155,.7);
+}
+
+.status-card h3{
+
+    margin-top:13px;
+
+    font-size:15px;
+}
+
+.status-card p{
+
+    margin-top:5px;
+
+    color:var(--muted);
+
+    font-size:11px;
+}
+
+
+/* GENERAL CARD */
+
+.card{
+
+    padding:21px;
+
+    border-radius:22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(17,29,53,.82),
+            rgba(7,13,27,.72)
+        );
+
+    border:
+        1px solid
+        var(--border);
+
+    backdrop-filter:
+        blur(20px);
+
+    box-shadow:
+        0 20px 60px
+        rgba(0,0,0,.25);
+
+    animation:
+        fadeUp
+        .7s
+        ease;
+}
+
+.card h3{
+    margin-bottom:7px;
+}
+
+.card-description{
+
+    color:var(--muted);
+
+    font-size:12px;
+
+    line-height:1.6;
+}
+
+
+/* CHILD */
+
+.child-card{
+
+    margin-top:18px;
+}
+
+.child-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:15px;
+}
+
+.child-profile{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+}
+
+.avatar{
+
+    width:52px;
+    height:52px;
+
+    display:grid;
+
+    place-items:center;
+
+    border-radius:17px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(30,145,255,.25),
+            rgba(0,210,255,.10)
+        );
+
+    border:
+        1px solid
+        rgba(50,180,255,.25);
+
+    font-size:25px;
+}
+
+.child-profile h3{
+    margin:0;
+}
+
+.child-profile p{
+
+    margin-top:4px;
+
+    color:var(--muted);
+
+    font-size:11px;
+}
+
+.online{
+
+    padding:7px 11px;
+
+    border-radius:20px;
+
+    color:#63efb7;
+
+    font-size:9px;
+
+    background:
+        rgba(50,230,150,.08);
+
+    border:
+        1px solid
+        rgba(50,230,150,.16);
+}
+
+
+/* CHILD DATA */
+
+.data-grid{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(2,1fr);
+
+    gap:10px;
+
+    margin-top:18px;
+}
+
+.data{
+
+    padding:14px;
+
+    border-radius:14px;
+
+    background:
+        rgba(255,255,255,.035);
+
+    border:
+        1px solid
+        rgba(255,255,255,.05);
+}
+
+.data small{
+
+    display:block;
+
+    color:#6e7b93;
+
+    font-size:9px;
+
+    margin-bottom:6px;
+}
+
+.data strong{
+
+    font-size:12px;
+
+    word-break:break-word;
+}
+
+
+/* LOCATION */
+
+.location-card{
+
+    margin-top:18px;
+}
+
+.map-box{
+
+    margin-top:16px;
+
+    min-height:220px;
+
+    border-radius:18px;
+
+    display:grid;
+
+    place-items:center;
+
+    text-align:center;
+
+    padding:25px;
+
+    background:
+
+        radial-gradient(
+            circle at center,
+            rgba(25,120,220,.20),
+            rgba(0,0,0,.45)
+        );
+
+    border:
+        1px solid
+        rgba(80,170,255,.12);
+}
+
+.map-icon{
+
+    font-size:42px;
+
+    margin-bottom:10px;
+}
+
+.map-box strong{
+
+    display:block;
+
+    font-size:14px;
+}
+
+.map-box span{
+
+    display:block;
+
+    margin-top:5px;
+
+    color:var(--muted);
+
+    font-size:11px;
+
+    max-width:500px;
+}
+
+
+/* ALERT */
+
+.alert-card{
+
+    margin-top:18px;
+
+    border-color:
+        rgba(255,49,88,.18);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(47,13,28,.70),
+            rgba(16,10,24,.75)
+        );
+}
+
+.alert-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:10px;
+}
+
+.alert-badge{
+
+    padding:6px 10px;
+
+    border-radius:20px;
+
+    color:#ffc857;
+
+    background:
+        rgba(255,200,87,.08);
+
+    border:
+        1px solid
+        rgba(255,200,87,.16);
+
+    font-size:9px;
+}
+
+.alert-empty{
+
+    margin-top:15px;
+
+    padding:17px;
+
+    border-radius:14px;
+
+    background:
+        rgba(255,255,255,.035);
+
+    border:
+        1px solid
+        rgba(255,255,255,.05);
+
+    color:#718099;
+
+    font-size:11px;
+
+    text-align:center;
+}
+
+
+/* CONTACT */
+
+.contact-card{
+
+    margin-top:18px;
+}
+
+.contact-row{
+
+    margin-top:15px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    gap:15px;
+
+    padding:15px;
+
+    border-radius:14px;
+
+    background:
+        rgba(255,255,255,.035);
+
+    border:
+        1px solid
+        rgba(255,255,255,.05);
+}
+
+.contact-email{
+
+    font-size:12px;
+
+    word-break:break-all;
+}
+
+.contact-status{
+
+    color:#4ff0b0;
+
+    font-size:9px;
+
+    white-space:nowrap;
+}
+
+
+/* MOBILE */
+
+@media(max-width:760px){
+
+    .header{
+        padding:12px 4%;
+    }
+
+    .logo small{
+        display:none;
+    }
+
+    .parent-badge{
+        display:none;
+    }
+
+    .container{
+
+        width:94%;
+
+        padding-top:18px;
+    }
+
+    .status-grid{
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .data-grid{
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .child-header{
+
+        align-items:flex-start;
+
+        flex-direction:column;
+    }
+
+    .contact-row{
+
+        align-items:flex-start;
+
+        flex-direction:column;
+    }
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<header class="header">
+
+    <div class="logo">
+
+        <div class="logo-icon">
+            🛡️
+        </div>
+
+        <div>
+
+            <h1>SafeGuard</h1>
+
+            <small>
+                Emergency Safety Platform
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <div class="header-right">
+
+        <span class="parent-badge">
+            Parent / Guardian
+        </span>
+
+        <button
+            class="logout"
+            id="logoutBtn">
+
+            Sign out
+
+        </button>
+
+    </div>
+
+</header>
+
+
+<main class="container">
+
+
+<section class="hero">
+
+    <h2>
+        Family Safety.<br>
+        Connected.
+    </h2>
+
+    <p>
+        Monitor your connected child's safety
+        status and emergency information from
+        one secure dashboard.
+    </p>
+
+</section>
+
+
+<!-- STATUS -->
+
+<section class="status-grid">
+
+
+    <article class="status-card">
+
+        <div class="status-top">
+
+            <div class="status-icon">
+                🧑
+            </div>
+
+            <div class="status-dot"></div>
+
+        </div>
+
+        <h3>
+            Child Account
+        </h3>
+
+        <p id="childAccountStatus">
+            Waiting for connection
+        </p>
+
+    </article>
+
+
+    <article class="status-card">
+
+        <div class="status-top">
+
+            <div class="status-icon">
+                📍
+            </div>
+
+            <div
+                class="status-dot"
+                id="locationDot">
+            </div>
+
+        </div>
+
+        <h3>
+            Location
+        </h3>
+
+        <p id="locationStatus">
+            Not currently shared
+        </p>
+
+    </article>
+
+
+    <article class="status-card">
+
+        <div class="status-top">
+
+            <div class="status-icon">
+                🚨
+            </div>
+
+            <div
+                class="status-dot"
+                id="sosDot"
+                style="
+                    background:#718099;
+                    box-shadow:none;
+                ">
+            </div>
+
+        </div>
+
+        <h3>
+            Emergency
+        </h3>
+
+        <p id="emergencyStatus">
+            No active emergency
+        </p>
+
+    </article>
+
+
+</section>
+
+
+<!-- CHILD -->
+
+<section class="card child-card">
+
+    <div class="child-header">
+
+        <div class="child-profile">
+
+            <div class="avatar">
+                🧑
+            </div>
+
+            <div>
+
+                <h3>
+                    Connected Child
+                </h3>
+
+                <p id="childEmail">
+                    No child connected yet
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <span class="online">
+            ● SYSTEM READY
+        </span>
+
+    </div>
+
+
+    <div class="data-grid">
+
+
+        <div class="data">
+
+            <small>
+                ACCOUNT STATUS
+            </small>
+
+            <strong id="accountValue">
+                Waiting for connection
+            </strong>
+
+        </div>
+
+
+        <div class="data">
+
+            <small>
+                LAST SAFETY UPDATE
+            </small>
+
+            <strong id="lastUpdate">
+                —
+            </strong>
+
+        </div>
+
+
+        <div class="data">
+
+            <small>
+                CAMERA
+            </small>
+
+            <strong id="cameraValue">
+                Not active
+            </strong>
+
+        </div>
+
+
+        <div class="data">
+
+            <small>
+                LOCATION
+            </small>
+
+            <strong id="locationValue">
+                Not shared
+            </strong>
+
+        </div>
+
+
+    </div>
+
+</section>
+
+
+<!-- LOCATION -->
+
+<section class="card location-card">
+
+    <h3>
+        📍 Child Location
+    </h3>
+
+    <p class="card-description">
+        Location information will appear here when
+        the connected child explicitly enables
+        location sharing.
+    </p>
+
+
+    <div class="map-box">
+
+        <div>
+
+            <div class="map-icon">
+                📍
+            </div>
+
+            <strong id="mapTitle">
+                Location not available
+            </strong>
+
+            <span id="mapDescription">
+                No live location has been shared yet.
+            </span>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- EMERGENCY -->
+
+<section class="card alert-card">
+
+    <div class="alert-header">
+
+        <div>
+
+            <h3>
+                🚨 Emergency Alerts
+            </h3>
+
+            <p class="card-description">
+                Emergency notifications from your
+                connected child will appear here.
+            </p>
+
+        </div>
+
+        <span class="alert-badge">
+            MONITORING
+        </span>
+
+    </div>
+
+
+    <div
+        class="alert-empty"
+        id="alertBox">
+
+        No active emergency alerts.
+
+    </div>
+
+</section>
+
+
+<!-- CONNECTION -->
+
+<section class="card contact-card">
+
+    <h3>
+        👨‍👩‍👧 Guardian Account
+    </h3>
+
+    <p class="card-description">
+        This account is signed in as a Parent /
+        Guardian.
+    </p>
+
+
+    <div class="contact-row">
+
+        <div>
+
+            <div class="contact-email"
+                 id="parentEmail">
+
+                Loading account...
+
+            </div>
+
+            <div
+                style="
+                    margin-top:4px;
+                    color:#687891;
+                    font-size:9px;
+                ">
+
+                Signed-in guardian
+
+            </div>
+
+        </div>
+
+
+        <span class="contact-status">
+            SECURE SESSION
+        </span>
+
+    </div>
+
+</section>
+
+
+</main>
+
+
+<script>
+
+"use strict";
+
+
+/* =====================================
+   AUTH
+===================================== */
+
+async function getCurrentUser(){
+
+    if(
+        typeof window.supabaseClient ===
+        "undefined"
+    ){
+        return null;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+    await window.supabaseClient
+    .auth
+    .getUser();
+
+
+    if(error || !data.user){
+
+        return null;
+    }
+
+
+    return data.user;
+}
+
+
+/* =====================================
+   PARENT ACCESS
+===================================== */
+
+async function checkParentAccess(){
+
+    const user =
+        await getCurrentUser();
+
+
+    if(!user){
+
+        window.location.replace(
+            "index.html"
+        );
+
+        return null;
+    }
+
+
+    const role =
+        localStorage.getItem(
+            "safeguard_role"
+        );
+
+
+    /*
+     * Prevent a child-selected session
+     * from accidentally opening the parent UI.
+     */
+
+    if(role !== "parent"){
+
+        window.location.replace(
+            "dashboard.html?role=child"
+        );
+
+        return null;
+    }
+
+
+    return user;
+}
+
+
+/* =====================================
+   LOAD ACCOUNT
+===================================== */
+
+async function loadParentAccount(){
+
+    const user =
+        await getCurrentUser();
+
+
+    if(!user) return;
+
+
+    document
+    .getElementById(
+        "parentEmail"
+    )
+    .textContent =
+        user.email ||
+        "Guardian account";
+
+
+    document
+    .getElementById(
+        "childAccountStatus"
+    )
+    .textContent =
+        "Ready for child connection";
+
+
+    document
+    .getElementById(
+        "accountValue"
+    )
+    .textContent =
+        "Waiting for connection";
+
+
+    document
+    .getElementById(
+        "lastUpdate"
+    )
+    .textContent =
+        new Date().toLocaleString();
+
+
+}
+
+
+/* =====================================
+   LOGOUT
+===================================== */
+
+document
+.getElementById("logoutBtn")
+.addEventListener(
+"click",
+async function(){
+
+    try{
+
+        await window.supabaseClient
+        .auth
+        .signOut();
+
+    }catch(error){
+
+        console.error(error);
+
+    }finally{
+
+        localStorage.removeItem(
+            "safeguard_role"
+        );
+
+        window.location.replace(
+            "index.html"
+        );
+
+    }
+
+});
+
+
+/* =====================================
+   START
+===================================== */
+
+(async function(){
+
+    const user =
+        await checkParentAccess();
+
+
+    if(user){
+
+        await loadParentAccount();
+
+    }
+
+})();
+
+</script>
+
+</body>
+</html>

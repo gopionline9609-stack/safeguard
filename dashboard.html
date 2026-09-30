@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1.0">
+
+<title>SafeGuard — Child Safety Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+:root{
+    --bg:#030712;
+    --card:rgba(12,20,38,.76);
+    --border:rgba(120,170,255,.14);
+    --blue:#35a7ff;
+    --cyan:#35e6ff;
+    --green:#35e69b;
+    --red:#ff3158;
+    --text:#f5f8ff;
+    --muted:#8996ad;
+}
+
+body{
+
+    min-height:100vh;
+
+    font-family:
+        Inter,
+        Arial,
+        sans-serif;
+
+    color:var(--text);
+
+    background:
+        radial-gradient(
+            circle at 5% 5%,
+            rgba(0,140,255,.18),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 95% 10%,
+            rgba(125,65,255,.18),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 50% 100%,
+            rgba(0,220,255,.10),
+            transparent 35%
+        ),
+        var(--bg);
+
+    overflow-x:hidden;
+}
+
+body::before,
+body::after{
+
+    content:"";
+
+    position:fixed;
+
+    width:320px;
+    height:320px;
+
+    border-radius:50%;
+
+    filter:blur(100px);
+
+    opacity:.16;
+
+    pointer-events:none;
+
+    z-index:-1;
+
+    animation:
+        float
+        10s
+        infinite
+        alternate
+        ease-in-out;
+}
+
+body::before{
+
+    background:#087cff;
+
+    left:-150px;
+    top:10%;
+}
+
+body::after{
+
+    background:#733cff;
+
+    right:-150px;
+    bottom:5%;
+
+    animation-delay:3s;
+}
+
+@keyframes float{
+
+    from{
+        transform:translate(0,0);
+    }
+
+    to{
+        transform:translate(45px,-35px);
+    }
+}
+
+
+/* HEADER */
+
+.header{
+
+    position:sticky;
+    top:0;
+
+    z-index:100;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    padding:13px 5%;
+
+    background:
+        rgba(3,7,18,.74);
+
+    backdrop-filter:blur(22px);
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,.06);
+}
+
+.logo{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+}
+
+.logo-icon{
+
+    width:43px;
+    height:43px;
+
+    display:grid;
+    place-items:center;
+
+    border-radius:14px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #147eff,
+            #00d9ff
+        );
+
+    box-shadow:
+        0 0 28px
+        rgba(0,190,255,.40);
+
+    font-size:22px;
+}
+
+.logo h1{
+    font-size:18px;
+}
+
+.logo small{
+
+    display:block;
+
+    color:#718099;
+
+    font-size:9px;
+
+    margin-top:2px;
+}
+
+.header-right{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+}
+
+.role-badge{
+
+    padding:7px 11px;
+
+    border-radius:20px;
+
+    color:#bdeaff;
+
+    font-size:10px;
+
+    background:
+        rgba(30,150,255,.10);
+
+    border:
+        1px solid
+        rgba(50,170,255,.20);
+}
+
+.logout{
+
+    border:
+        1px solid
+        rgba(255,255,255,.10);
+
+    background:
+        rgba(255,255,255,.045);
+
+    color:#dce6f8;
+
+    padding:9px 14px;
+
+    border-radius:11px;
+
+    cursor:pointer;
+
+    transition:.25s;
+}
+
+.logout:hover{
+
+    background:
+        rgba(255,255,255,.10);
+
+    transform:translateY(-2px);
+}
+
+
+/* MAIN */
+
+.container{
+
+    width:min(1120px,92%);
+
+    margin:auto;
+
+    padding:30px 0 60px;
+}
+
+.hero{
+
+    text-align:center;
+
+    padding:25px 0 20px;
+
+    animation:
+        fadeUp
+        .7s
+        ease;
+}
+
+.hero h2{
+
+    font-size:
+        clamp(34px,6vw,56px);
+
+    line-height:1.04;
+
+    background:
+        linear-gradient(
+            90deg,
+            #fff,
+            #5ddcff,
+            #9b82ff
+        );
+
+    -webkit-background-clip:text;
+    background-clip:text;
+
+    color:transparent;
+}
+
+.hero p{
+
+    max-width:680px;
+
+    margin:14px auto 0;
+
+    color:var(--muted);
+
+    font-size:13px;
+
+    line-height:1.65;
+}
+
+@keyframes fadeUp{
+
+    from{
+        opacity:0;
+        transform:translateY(20px);
+    }
+
+    to{
+        opacity:1;
+        transform:none;
+    }
+}
+
+
+/* CARDS */
+
+.card{
+
+    padding:21px;
+
+    border-radius:22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(17,29,53,.82),
+            rgba(7,13,27,.72)
+        );
+
+    border:
+        1px solid
+        var(--border);
+
+    backdrop-filter:blur(20px);
+
+    box-shadow:
+        0 20px 60px
+        rgba(0,0,0,.25),
+
+        inset 0 1px 0
+        rgba(255,255,255,.025);
+
+    transition:.3s;
+
+    animation:
+        fadeUp
+        .7s
+        ease;
+}
+
+.card:hover{
+
+    transform:translateY(-2px);
+
+    border-color:
+        rgba(70,180,255,.22);
+
+    box-shadow:
+        0 25px 70px
+        rgba(0,0,0,.32);
+}
+
+.card h3{
+    margin-bottom:7px;
+}
+
+.card-description{
+
+    color:var(--muted);
+
+    font-size:12px;
+
+    line-height:1.6;
+}
+
+
+/* PARENT CONTACT */
+
+.parent-card{
+
+    margin-top:18px;
+
+    padding:21px;
+
+    border-radius:22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(17,29,53,.82),
+            rgba(7,13,27,.72)
+        );
+
+    border:
+        1px solid
+        var(--border);
+
+    backdrop-filter:blur(20px);
+
+    animation:
+        fadeUp
+        .7s
+        ease;
+}
+
+.parent-title{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:10px;
+}
+
+.parent-title p{
+
+    color:var(--muted);
+
+    font-size:12px;
+
+    line-height:1.6;
+}
+
+.parent-status-badge{
+
+    padding:6px 10px;
+
+    border-radius:20px;
+
+    font-size:9px;
+
+    color:#62efb6;
+
+    background:
+        rgba(50,230,150,.08);
+
+    border:
+        1px solid
+        rgba(50,230,150,.15);
+
+    white-space:nowrap;
+}
+
+.parent-row{
+
+    display:flex;
+
+    gap:10px;
+
+    margin-top:16px;
+}
+
+.parent-row input{
+
+    flex:1;
+
+    min-width:0;
+
+    border:
+        1px solid
+        rgba(255,255,255,.09);
+
+    outline:none;
+
+    border-radius:12px;
+
+    padding:13px;
+
+    background:
+        rgba(0,0,0,.22);
+
+    color:white;
+}
+
+.save-parent{
+
+    border:0;
+
+    border-radius:12px;
+
+    padding:0 20px;
+
+    color:white;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    background:
+        linear-gradient(
+            135deg,
+            #197fff,
+            #00c9ff
+        );
+
+    transition:.25s;
+}
+
+.save-parent:hover{
+    transform:translateY(-2px);
+}
+
+.save-parent:disabled{
+    opacity:.6;
+    cursor:wait;
+}
+
+#parentStatus{
+
+    margin-top:9px;
+
+    font-size:11px;
+}
+
+.parent-list{
+
+    display:grid;
+
+    gap:9px;
+
+    margin-top:14px;
+}
+
+.parent-item{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:10px;
+
+    padding:12px 14px;
+
+    border-radius:13px;
+
+    background:
+        rgba(255,255,255,.035);
+
+    border:
+        1px solid
+        rgba(255,255,255,.05);
+}
+
+.parent-email{
+
+    font-size:12px;
+
+    word-break:break-all;
+}
+
+.parent-label{
+
+    color:#687891;
+
+    font-size:9px;
+
+    margin-top:3px;
+}
+
+
+/* GRID */
+
+.grid{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(2,1fr);
+
+    gap:18px;
+
+    margin-top:18px;
+}
+
+
+/* CAMERA */
+
+.camera-box{
+
+    margin-top:16px;
+
+    position:relative;
+
+    overflow:hidden;
+
+    border-radius:17px;
+
+    background:#01040a;
+
+    border:
+        1px solid
+        rgba(255,255,255,.07);
+
+    aspect-ratio:16/9;
+}
+
+video{
+
+    width:100%;
+    height:100%;
+
+    object-fit:cover;
+
+    display:block;
+}
+
+.camera-off{
+
+    position:absolute;
+
+    inset:0;
+
+    display:grid;
+
+    place-items:center;
+
+    color:#68748b;
+
+    font-size:12px;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(20,40,70,.35),
+            rgba(0,0,0,.6)
+        );
+}
+
+
+/* LOCATION */
+
+.location-data{
+
+    margin-top:16px;
+
+    display:grid;
+
+    gap:9px;
+}
+
+.data{
+
+    padding:12px 13px;
+
+    border-radius:13px;
+
+    background:
+        rgba(255,255,255,.035);
+
+    border:
+        1px solid
+        rgba(255,255,255,.05);
+}
+
+.data small{
+
+    display:block;
+
+    color:#6e7b93;
+
+    margin-bottom:5px;
+
+    font-size:9px;
+}
+
+.data strong{
+
+    font-size:12px;
+
+    word-break:break-word;
+}
+
+
+/* BUTTON */
+
+.permission-button{
+
+    margin-top:16px;
+
+    width:100%;
+
+    padding:13px;
+
+    border:0;
+
+    border-radius:13px;
+
+    color:white;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    background:
+        linear-gradient(
+            135deg,
+            #1484ff,
+            #00cfff
+        );
+
+    box-shadow:
+        0 0 25px
+        rgba(0,180,255,.18);
+
+    transition:.25s;
+}
+
+.permission-button:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 0 35px
+        rgba(0,180,255,.40);
+}
+
+.permission-button.active{
+
+    background:
+        linear-gradient(
+            135deg,
+            #10bd7b,
+            #25e6a1
+        );
+}
+
+
+/* SOS */
+
+.sos-card{
+
+    grid-column:1/-1;
+
+    text-align:center;
+
+    padding:30px 20px;
+
+    border-color:
+        rgba(255,49,88,.18);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(47,13,28,.72),
+            rgba(16,10,24,.75)
+        );
+}
+
+.sos-ring{
+
+    width:150px;
+    height:150px;
+
+    margin:auto;
+
+    display:grid;
+
+    place-items:center;
+
+    position:relative;
+}
+
+.sos-ring::before,
+.sos-ring::after{
+
+    content:"";
+
+    position:absolute;
+
+    inset:0;
+
+    border-radius:50%;
+
+    border:
+        1px solid
+        rgba(255,49,88,.25);
+
+    animation:
+        ring
+        2.4s
+        infinite;
+}
+
+.sos-ring::after{
+    animation-delay:1.2s;
+}
+
+@keyframes ring{
+
+    0%{
+        transform:scale(.7);
+        opacity:0;
+    }
+
+    35%{
+        opacity:1;
+    }
+
+    100%{
+        transform:scale(1.25);
+        opacity:0;
+    }
+}
+
+.sos{
+
+    width:105px;
+    height:105px;
+
+    border:0;
+
+    border-radius:50%;
+
+    cursor:pointer;
+
+    color:white;
+
+    font-size:18px;
+
+    font-weight:900;
+
+    background:
+        radial-gradient(
+            circle at 35% 30%,
+            #ff6b85,
+            #ff1744 55%,
+            #a9002b
+        );
+
+    box-shadow:
+        0 0 35px
+        rgba(255,30,75,.45);
+
+    transition:.2s;
+
+    position:relative;
+
+    z-index:2;
+}
+
+.sos:hover{
+
+    transform:scale(1.07);
+
+    box-shadow:
+        0 0 55px
+        rgba(255,30,75,.7);
+}
+
+.sos-text{
+    margin-top:18px;
+}
+
+.sos-text p{
+
+    color:var(--muted);
+
+    font-size:11px;
+
+    line-height:1.6;
+
+    max-width:600px;
+
+    margin:7px auto 0;
+}
+
+.sos-status{
+
+    margin-top:12px;
+
+    min-height:18px;
+
+    font-size:11px;
+}
+
+
+/* MOBILE */
+
+@media(max-width:720px){
+
+    .header{
+        padding:12px 4%;
+    }
+
+    .logo small{
+        display:none;
+    }
+
+    .role-badge{
+        display:none;
+    }
+
+    .container{
+        width:94%;
+        padding-top:18px;
+    }
+
+    .grid{
+        grid-template-columns:1fr;
+    }
+
+    .sos-card{
+        grid-column:auto;
+    }
+
+    .parent-row{
+        flex-direction:column;
+    }
+
+    .save-parent{
+        padding:13px;
+    }
+
+    .parent-title{
+        align-items:flex-start;
+        flex-direction:column;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+
+<header class="header">
+
+    <div class="logo">
+
+        <div class="logo-icon">
+            🛡️
+        </div>
+
+        <div>
+
+            <h1>SafeGuard</h1>
+
+            <small>
+                Emergency Safety Platform
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <div class="header-right">
+
+        <span
+            class="role-badge">
+            Child / User
+        </span>
+
+        <button
+            class="logout"
+            id="logoutBtn">
+
+            Sign out
+
+        </button>
+
+    </div>
+
+</header>
+
+
+<main class="container">
+
+
+<section class="hero">
+
+    <h2>
+        Your Safety.<br>
+        One Tap Away.
+    </h2>
+
+    <p>
+        Manage your trusted emergency contact,
+        camera and location permissions from one
+        secure dashboard.
+    </p>
+
+</section>
+
+
+<!-- TRUSTED PARENT -->
+
+<section class="parent-card">
+
+    <div class="parent-title">
+
+        <div>
+
+            <h3>
+                👨‍👩‍👧 Trusted Parent / Guardian
+            </h3>
+
+            <p>
+                Add the Gmail address of a parent or
+                trusted guardian for emergency contact.
+            </p>
+
+        </div>
+
+        <span class="parent-status-badge">
+            SECURE CONTACT
+        </span>
+
+    </div>
+
+
+    <div class="parent-row">
+
+        <input
+            id="parentEmail"
+            type="email"
+            placeholder="parent@gmail.com"
+            autocomplete="email">
+
+        <button
+            class="save-parent"
+            id="saveParent">
+
+            Save Contact
+
+        </button>
+
+    </div>
+
+
+    <div id="parentStatus"></div>
+
+    <div
+        class="parent-list"
+        id="parentList">
+    </div>
+
+</section>
+
+
+<section class="grid">
+
+
+<!-- CAMERA -->
+
+<article class="card">
+
+    <h3>📷 Camera</h3>
+
+    <p class="card-description">
+        Camera access requires your browser permission.
+        The preview remains on this device unless you
+        explicitly use an authorized emergency-sharing
+        feature.
+    </p>
+
+
+    <div class="camera-box">
+
+        <video
+            id="cameraPreview"
+            autoplay
+            playsinline
+            muted>
+        </video>
+
+        <div
+            class="camera-off"
+            id="cameraOff">
+
+            Camera not active
+
+        </div>
+
+    </div>
+
+
+    <button
+        class="permission-button"
+        id="cameraBtn">
+
+        Enable Camera
+
+    </button>
+
+</article>
+
+
+<!-- LOCATION -->
+
+<article class="card">
+
+    <h3>📍 Location</h3>
+
+    <p class="card-description">
+        GPS coordinates are supplied by your device
+        after you grant location permission.
+    </p>
+
+
+    <div class="location-data">
+
+        <div class="data">
+
+            <small>Address</small>
+
+            <strong id="address">
+                Permission required
+            </strong>
+
+        </div>
+
+
+        <div class="data">
+
+            <small>Latitude</small>
+
+            <strong id="latitude">
+                —
+            </strong>
+
+        </div>
+
+
+        <div class="data">
+
+            <small>Longitude</small>
+
+            <strong id="longitude">
+                —
+            </strong>
+
+        </div>
+
+
+        <div class="data">
+
+            <small>Accuracy</small>
+
+            <strong id="accuracy">
+                —
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <button
+        class="permission-button"
+        id="locationBtn">
+
+        Enable Location
+
+    </button>
+
+</article>
+
+
+<!-- SOS -->
+
+<article class="card sos-card">
+
+    <div class="sos-ring">
+
+        <button
+            class="sos"
+            id="sosBtn">
+
+            SOS
+
+        </button>
+
+    </div>
+
+
+    <div class="sos-text">
+
+        <h3>
+            Emergency SOS
+        </h3>
+
+        <p>
+            Use SOS only during a real emergency.
+            Your authorized emergency workflow can
+            use the location and contact information
+            you have configured.
+        </p>
+
+        <div
+            class="sos-status"
+            id="sosStatus">
+        </div>
+
+    </div>
+
+</article>
+
+
+</section>
+
+</main>
+
+
+<script>
+
+"use strict";
+
+
+let cameraStream = null;
+let locationWatchId = null;
+
+
+/* AUTH */
+
+async function getCurrentUser(){
+
+    if(
+        typeof window.supabaseClient ===
+        "undefined"
+    ){
+        return null;
+    }
+
+    const {
+        data,
+        error
+    } =
+    await window.supabaseClient
+    .auth
+    .getUser();
+
+    if(error || !data.user){
+        return null;
+    }
+
+    return data.user;
+}
+
+
+/* AUTH GUARD */
+
+async function checkChildAccess(){
+
+    const user =
+        await getCurrentUser();
+
+    if(!user){
+
+        window.location.replace(
+            "index.html"
+        );
+
+        return null;
+    }
+
+
+    /*
+     * Prevent parent-selected session
+     * from accidentally opening child UI.
+     */
+
+    const selectedRole =
+        localStorage.getItem(
+            "safeguard_role"
+        );
+
+
+    if(selectedRole === "parent"){
+
+        window.location.replace(
+            "parent-dashboard.html?role=parent"
+        );
+
+        return null;
+    }
+
+
+    return user;
+}
+
+
+/* SAFE HTML */
+
+function escapeHTML(value){
+
+    return String(value)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+
+/* LOAD PARENT CONTACTS */
+
+async function loadParents(){
+
+    const user =
+        await getCurrentUser();
+
+    if(!user) return;
+
+
+    const list =
+        document.getElementById(
+            "parentList"
+        );
+
+
+    try{
+
+        const {
+            data,
+            error
+        } =
+        await window.supabaseClient
+        .from("trusted_contacts")
+        .select("*")
+        .eq("user_id",user.id)
+        .order(
+            "created_at",
+            {ascending:false}
+        );
+
+
+        list.innerHTML = "";
+
+
+        if(error){
+
+            console.error(error);
+
+            list.innerHTML = `
+                <div class="parent-item">
+                    <div>
+                        <div class="parent-email">
+                            Unable to load contacts
+                        </div>
+                        <div class="parent-label">
+                            Please check your Supabase table and RLS settings.
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return;
+        }
+
+
+        if(!data || data.length === 0){
+
+            list.innerHTML = `
+                <div class="parent-item">
+                    <div>
+                        <div class="parent-email">
+                            No parent contact added
+                        </div>
+                        <div class="parent-label">
+                            Add a trusted Gmail above
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return;
+        }
+
+
+        data.forEach(function(contact){
+
+            const item =
+                document.createElement("div");
+
+            item.className =
+                "parent-item";
+
+
+            item.innerHTML = `
+
+                <div>
+
+                    <div class="parent-email">
+                        ${escapeHTML(
+                            contact.parent_email || ""
+                        )}
+                    </div>
+
+                    <div class="parent-label">
+                        ${
+                            contact.verified
+                            ? "Verified contact"
+                            : "Pending verification"
+                        }
+                    </div>
+
+                </div>
+
+                <span>
+                    ${
+                        contact.verified
+                        ? "✓"
+                        : "•"
+                    }
+                </span>
+            `;
+
+
+            list.appendChild(item);
+
+        });
+
+    }catch(error){
+
+        console.error(error);
+
+    }
+
+}
+
+
+/* SAVE PARENT */
+
+document
+.getElementById("saveParent")
+.addEventListener(
+"click",
+async function(){
+
+    const input =
+        document.getElementById(
+            "parentEmail"
+        );
+
+    const status =
+        document.getElementById(
+            "parentStatus"
+        );
+
+    const email =
+        input.value
+        .trim()
+        .toLowerCase();
+
+
+    if(!email){
+
+        status.textContent =
+            "Please enter a parent Gmail address.";
+
+        status.style.color =
+            "#ff7088";
+
+        return;
+    }
+
+
+    if(
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        .test(email)
+    ){
+
+        status.textContent =
+            "Please enter a valid email address.";
+
+        status.style.color =
+            "#ff7088";
+
+        return;
+    }
+
+
+    const user =
+        await getCurrentUser();
+
+    if(!user){
+
+        window.location.replace(
+            "index.html"
+        );
+
+        return;
+    }
+
+
+    const button = this;
+
+    button.disabled = true;
+
+    button.textContent =
+        "Saving...";
+
+
+    try{
+
+        const {
+            error
+        } =
+        await window.supabaseClient
+        .from("trusted_contacts")
+        .insert({
+
+            user_id:user.id,
+
+            parent_email:email,
+
+            relationship:"parent",
+
+            verified:false
+
+        });
+
+
+        if(error){
+
+            throw error;
+
+        }
+
+
+        status.textContent =
+            "✓ Parent contact saved successfully.";
+
+        status.style.color =
+            "#4ff0b0";
+
+        input.value = "";
+
+
+        await loadParents();
+
+
+    }catch(error){
+
+        console.error(error);
+
+        status.textContent =
+            error.message ||
+            "Could not save contact.";
+
+        status.style.color =
+            "#ff7088";
+
+
+    }finally{
+
+        button.disabled = false;
+
+        button.textContent =
+            "Save Contact";
+
+    }
+
+});
+
+
+/* CAMERA */
+
+document
+.getElementById("cameraBtn")
+.addEventListener(
+"click",
+async function(){
+
+    const button = this;
+
+    try{
+
+        if(
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ){
+
+            alert(
+                "Camera is not supported by this browser."
+            );
+
+            return;
+        }
+
+
+        if(cameraStream){
+
+            cameraStream
+            .getTracks()
+            .forEach(function(track){
+                track.stop();
+            });
+
+            cameraStream = null;
+
+
+            document
+            .getElementById(
+                "cameraPreview"
+            )
+            .srcObject = null;
+
+
+            document
+            .getElementById(
+                "cameraOff"
+            )
+            .style.display = "grid";
+
+
+            button.textContent =
+                "Enable Camera";
+
+            button.classList.remove(
+                "active"
+            );
+
+            return;
+        }
+
+
+        button.textContent =
+            "Requesting permission...";
+
+
+        cameraStream =
+            await navigator
+            .mediaDevices
+            .getUserMedia({
+
+                video:{
+                    facingMode:"user",
+                    width:{ideal:1280},
+                    height:{ideal:720}
+                },
+
+                audio:false
+
+            });
+
+
+        document
+        .getElementById(
+            "cameraPreview"
+        )
+        .srcObject =
+            cameraStream;
+
+
+        document
+        .getElementById(
+            "cameraOff"
+        )
+        .style.display =
+            "none";
+
+
+        button.textContent =
+            "✓ Camera Active";
+
+        button.classList.add(
+            "active"
+        );
+
+
+    }catch(error){
+
+        console.error(error);
+
+        button.textContent =
+            "Enable Camera";
+
+        alert(
+            "Camera permission was not granted. Please allow camera access."
+        );
+
+    }
+
+});
+
+
+/* LOCATION */
+
+document
+.getElementById("locationBtn")
+.addEventListener(
+"click",
+function(){
+
+    if(!navigator.geolocation){
+
+        alert(
+            "Location is not supported by this browser."
+        );
+
+        return;
+    }
+
+
+    const button = this;
+
+
+    if(locationWatchId !== null){
+
+        navigator
+        .geolocation
+        .clearWatch(
+            locationWatchId
+        );
+
+        locationWatchId = null;
+
+        button.textContent =
+            "Enable Location";
+
+        button.classList.remove(
+            "active"
+        );
+
+        return;
+    }
+
+
+    button.textContent =
+        "Requesting permission...";
+
+
+    locationWatchId =
+    navigator.geolocation.watchPosition(
+
+        async function(position){
+
+            const lat =
+                position.coords.latitude;
+
+            const lng =
+                position.coords.longitude;
+
+            const acc =
+                position.coords.accuracy;
+
+
+            document
+            .getElementById(
+                "latitude"
+            )
+            .textContent =
+                lat.toFixed(6);
+
+
+            document
+            .getElementById(
+                "longitude"
+            )
+            .textContent =
+                lng.toFixed(6);
+
+
+            document
+            .getElementById(
+                "accuracy"
+            )
+            .textContent =
+                Math.round(acc) +
+                " meters";
+
+
+            button.textContent =
+                "✓ Location Active";
+
+            button.classList.add(
+                "active"
+            );
+
+
+            try{
+
+                const response =
+                    await fetch(
+                        "https://nominatim.openstreetmap.org/reverse" +
+                        "?format=jsonv2" +
+                        "&lat=" +
+                        encodeURIComponent(lat) +
+                        "&lon=" +
+                        encodeURIComponent(lng),
+                        {
+                            headers:{
+                                "Accept":
+                                    "application/json"
+                            }
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                document
+                .getElementById(
+                    "address"
+                )
+                .textContent =
+                    data.display_name ||
+                    "Address unavailable";
+
+
+            }catch(error){
+
+                console.error(error);
+
+                document
+                .getElementById(
+                    "address"
+                )
+                .textContent =
+                    "Address lookup unavailable";
+
+            }
+
+        },
+
+        function(error){
+
+            console.error(error);
+
+            button.textContent =
+                "Enable Location";
+
+            button.classList.remove(
+                "active"
+            );
+
+            alert(
+                "Location permission was not granted. Please allow location access."
+            );
+
+        },
+
+        {
+            enableHighAccuracy:true,
+            maximumAge:5000,
+            timeout:15000
+        }
+
+    );
+
+});
+
+
+/* SOS */
+
+document
+.getElementById("sosBtn")
+.addEventListener(
+"click",
+async function(){
+
+    const status =
+        document.getElementById(
+            "sosStatus"
+        );
+
+
+    const user =
+        await getCurrentUser();
+
+    if(!user){
+
+        window.location.replace(
+            "index.html"
+        );
+
+        return;
+    }
+
+
+    const savedParent =
+        document.querySelector(
+            ".parent-email"
+        );
+
+
+    if(!savedParent){
+
+        status.textContent =
+            "Add a trusted parent contact before using SOS.";
+
+        status.style.color =
+            "#ff7088";
+
+        return;
+    }
+
+
+    status.textContent =
+        "Emergency request prepared. Secure notification service needs to be connected.";
+
+    status.style.color =
+        "#ffc857";
+
+});
+
+
+/* LOGOUT */
+
+document
+.getElementById("logoutBtn")
+.addEventListener(
+"click",
+async function(){
+
+    try{
+
+        await window.supabaseClient
+        .auth
+        .signOut();
+
+    }catch(error){
+
+        console.error(error);
+
+    }finally{
+
+        localStorage.removeItem(
+            "safeguard_role"
+        );
+
+        window.location.replace(
+            "index.html"
+        );
+
+    }
+
+});
+
+
+/* START */
+
+(async function(){
+
+    const user =
+        await checkChildAccess();
+
+    if(user){
+
+        await loadParents();
+
+    }
+
+})();
+
+</script>
+
+</body>
+</html>

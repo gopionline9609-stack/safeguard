@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SafeGuard — Secure Emergency Protection</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+:root{
+    --bg:#030712;
+    --blue:#36a8ff;
+    --cyan:#35e6ff;
+    --purple:#8b6cff;
+    --green:#3df2ae;
+    --red:#ff5274;
+    --text:#f5f8ff;
+    --muted:#8996ad;
+}
+
+html{
+    min-height:100%;
+}
+
+body{
+    min-height:100vh;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:20px;
+
+    font-family:
+        Inter,
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    color:var(--text);
+
+    background:
+        radial-gradient(
+            circle at 15% 10%,
+            rgba(0,153,255,.22),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 85% 15%,
+            rgba(125,70,255,.22),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 50% 100%,
+            rgba(0,220,255,.13),
+            transparent 35%
+        ),
+        var(--bg);
+
+    overflow-x:hidden;
+}
+
+body::before,
+body::after{
+    content:"";
+
+    position:fixed;
+
+    width:360px;
+    height:360px;
+
+    border-radius:50%;
+
+    filter:blur(110px);
+
+    opacity:.18;
+
+    pointer-events:none;
+
+    z-index:-1;
+
+    animation:
+        floatingGlow
+        10s
+        ease-in-out
+        infinite
+        alternate;
+}
+
+body::before{
+    background:#168cff;
+    left:-170px;
+    top:5%;
+}
+
+body::after{
+    background:#7b3cff;
+    right:-170px;
+    bottom:5%;
+    animation-delay:3s;
+}
+
+@keyframes floatingGlow{
+
+    0%{
+        transform:translate(0,0) scale(1);
+    }
+
+    100%{
+        transform:translate(45px,-35px) scale(1.15);
+    }
+}
+
+
+/* MAIN */
+
+.login-container{
+    width:min(500px,100%);
+    text-align:center;
+
+    animation:
+        pageIn
+        .8s
+        ease
+        forwards;
+}
+
+@keyframes pageIn{
+
+    from{
+        opacity:0;
+        transform:
+            translateY(28px)
+            scale(.96);
+    }
+
+    to{
+        opacity:1;
+        transform:none;
+    }
+}
+
+
+/* BRAND */
+
+.brand-icon{
+
+    width:72px;
+    height:72px;
+
+    margin:0 auto 15px;
+
+    display:grid;
+    place-items:center;
+
+    border-radius:22px;
+
+    font-size:34px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #157cff,
+            #00d9ff
+        );
+
+    border:
+        1px solid
+        rgba(255,255,255,.18);
+
+    box-shadow:
+        0 0 25px rgba(0,190,255,.35),
+        0 0 60px rgba(0,150,255,.18),
+        inset 0 1px 12px rgba(255,255,255,.30);
+
+    animation:
+        shieldPulse
+        3s
+        ease-in-out
+        infinite;
+}
+
+@keyframes shieldPulse{
+
+    0%,100%{
+        transform:scale(1);
+    }
+
+    50%{
+        transform:scale(1.04);
+    }
+}
+
+.brand h1{
+
+    font-size:33px;
+    letter-spacing:-1.2px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #ffffff,
+            #65ddff,
+            #9b87ff
+        );
+
+    -webkit-background-clip:text;
+    background-clip:text;
+
+    color:transparent;
+}
+
+.brand p{
+
+    margin-top:7px;
+
+    color:var(--muted);
+
+    font-size:13px;
+}
+
+
+/* CARD */
+
+.login-card{
+
+    position:relative;
+
+    margin-top:28px;
+
+    padding:31px 25px;
+
+    border-radius:29px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(18,30,55,.91),
+            rgba(6,12,26,.88)
+        );
+
+    border:
+        1px solid
+        rgba(120,170,255,.17);
+
+    backdrop-filter:blur(25px);
+    -webkit-backdrop-filter:blur(25px);
+
+    box-shadow:
+        0 30px 90px rgba(0,0,0,.42),
+        inset 0 1px 0 rgba(255,255,255,.06);
+
+    overflow:hidden;
+}
+
+.login-card::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:10%;
+    right:10%;
+    top:0;
+
+    height:1px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(60,210,255,.8),
+            transparent
+        );
+
+    animation:
+        scanLine
+        4s
+        linear
+        infinite;
+}
+
+@keyframes scanLine{
+
+    0%{
+        transform:translateX(-40%);
+        opacity:0;
+    }
+
+    20%,
+    80%{
+        opacity:1;
+    }
+
+    100%{
+        transform:translateX(40%);
+        opacity:0;
+    }
+}
+
+
+/* SHIELD */
+
+.shield{
+
+    width:60px;
+    height:60px;
+
+    margin:0 auto 17px;
+
+    display:grid;
+    place-items:center;
+
+    border-radius:19px;
+
+    background:
+        rgba(50,160,255,.10);
+
+    border:
+        1px solid
+        rgba(70,180,255,.22);
+
+    font-size:28px;
+
+    box-shadow:
+        0 0 30px
+        rgba(0,170,255,.18);
+}
+
+
+/* TEXT */
+
+.login-card h2{
+    font-size:25px;
+}
+
+.login-description{
+
+    margin:
+        10px auto 23px;
+
+    max-width:390px;
+
+    color:var(--muted);
+
+    font-size:13px;
+
+    line-height:1.6;
+}
+
+
+/* ROLE */
+
+.role-title{
+
+    text-align:left;
+
+    font-size:12px;
+
+    color:#aab7cb;
+
+    margin-bottom:10px;
+}
+
+.role-grid{
+
+    display:grid;
+
+    grid-template-columns:1fr 1fr;
+
+    gap:11px;
+
+    margin-bottom:19px;
+}
+
+.role{
+
+    appearance:none;
+    -webkit-appearance:none;
+
+    position:relative;
+
+    width:100%;
+
+    padding:17px 10px;
+
+    border-radius:17px;
+
+    border:
+        1px solid
+        rgba(255,255,255,.09);
+
+    background:
+        rgba(255,255,255,.035);
+
+    color:#dce6f8;
+
+    cursor:pointer;
+
+    font-family:inherit;
+
+    transition:.25s;
+
+    -webkit-tap-highlight-color:transparent;
+
+    user-select:none;
+}
+
+.role:hover{
+
+    transform:translateY(-3px);
+
+    border-color:
+        rgba(70,180,255,.38);
+
+    box-shadow:
+        0 10px 30px
+        rgba(0,140,255,.10);
+}
+
+.role:active{
+    transform:scale(.97);
+}
+
+.role.active{
+
+    border-color:
+        rgba(55,190,255,.75);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(20,130,255,.23),
+            rgba(0,210,255,.09)
+        );
+
+    box-shadow:
+        0 0 25px
+        rgba(0,170,255,.17);
+}
+
+.role.active::after{
+
+    content:"✓";
+
+    position:absolute;
+
+    top:8px;
+    right:9px;
+
+    width:20px;
+    height:20px;
+
+    display:grid;
+    place-items:center;
+
+    border-radius:50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #20a8ff,
+            #31e0ff
+        );
+
+    color:white;
+
+    font-size:11px;
+    font-weight:900;
+}
+
+.role-icon{
+
+    display:block;
+
+    font-size:25px;
+
+    margin-bottom:7px;
+}
+
+.role strong{
+
+    display:block;
+
+    font-size:13px;
+}
+
+.role small{
+
+    display:block;
+
+    color:#718099;
+
+    margin-top:4px;
+
+    font-size:10px;
+}
+
+
+/* GOOGLE */
+
+.google-button{
+
+    width:100%;
+
+    min-height:54px;
+
+    border:0;
+
+    padding:15px;
+
+    border-radius:16px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    gap:11px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff,
+            #eaf3ff
+        );
+
+    color:#111827;
+
+    font-family:inherit;
+
+    font-size:14px;
+
+    font-weight:800;
+
+    cursor:pointer;
+
+    transition:.25s;
+
+    box-shadow:
+        0 10px 35px
+        rgba(0,0,0,.25);
+
+    touch-action:manipulation;
+}
+
+.google-button:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:
+        0 16px 42px
+        rgba(40,150,255,.24);
+}
+
+.google-button:active{
+    transform:scale(.98);
+}
+
+.google-button:disabled{
+
+    cursor:wait;
+
+    opacity:.65;
+
+    transform:none;
+}
+
+.google-icon{
+
+    width:27px;
+    height:27px;
+
+    flex:none;
+
+    display:grid;
+    place-items:center;
+
+    border-radius:50%;
+
+    background:white;
+
+    color:#4285f4;
+
+    font-size:16px;
+
+    font-weight:900;
+}
+
+
+/* STATUS */
+
+#loginStatus{
+
+    margin-top:14px;
+
+    min-height:20px;
+
+    font-size:12px;
+
+    line-height:1.5;
+}
+
+.status-error{
+    color:#ff7188;
+}
+
+.status-success{
+    color:#45efad;
+}
+
+.status-info{
+    color:#6fdcff;
+}
+
+
+/* SECURITY */
+
+.security-note{
+
+    margin-top:18px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    gap:7px;
+
+    color:#718099;
+
+    font-size:11px;
+}
+
+
+/* FOOTER */
+
+footer{
+
+    margin-top:22px;
+
+    color:#56647a;
+
+    font-size:10px;
+}
+
+
+/* MOBILE */
+
+@media(max-width:500px){
+
+    body{
+        padding:14px;
+    }
+
+    .login-card{
+
+        margin-top:23px;
+
+        padding:25px 17px;
+
+        border-radius:25px;
+    }
+
+    .brand h1{
+        font-size:29px;
+    }
+
+    .brand-icon{
+
+        width:64px;
+        height:64px;
+
+        font-size:30px;
+    }
+
+    .login-card h2{
+        font-size:22px;
+    }
+
+    .role{
+        padding:16px 7px;
+    }
+}
+
+@media(max-width:360px){
+
+    .role-grid{
+        gap:7px;
+    }
+
+    .role strong{
+        font-size:12px;
+    }
+
+    .role small{
+        font-size:9px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<main class="login-container">
+
+    <div class="brand-icon">
+        🛡️
+    </div>
+
+    <div class="brand">
+
+        <h1>SafeGuard</h1>
+
+        <p>
+            Emergency protection, when you need it most.
+        </p>
+
+    </div>
+
+
+    <section class="login-card">
+
+        <div class="shield">
+            🛡️
+        </div>
+
+        <h2>
+            Welcome to SafeGuard
+        </h2>
+
+        <p class="login-description">
+            Choose your account type and securely sign in.
+        </p>
+
+
+        <div class="role-title">
+            I am signing in as
+        </div>
+
+
+        <div class="role-grid">
+
+            <button
+                type="button"
+                class="role active"
+                data-role="child">
+
+                <span class="role-icon">
+                    🧑
+                </span>
+
+                <strong>
+                    Child / User
+                </strong>
+
+                <small>
+                    Emergency protection
+                </small>
+
+            </button>
+
+
+            <button
+                type="button"
+                class="role"
+                data-role="parent">
+
+                <span class="role-icon">
+                    👨‍👩‍👧
+                </span>
+
+                <strong>
+                    Parent / Guardian
+                </strong>
+
+                <small>
+                    Safety monitoring
+                </small>
+
+            </button>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="googleLogin"
+            class="google-button">
+
+            <span class="google-icon">
+                G
+            </span>
+
+            <span id="googleText">
+                Continue with Google
+            </span>
+
+        </button>
+
+
+        <div
+            id="loginStatus"
+            aria-live="polite">
+        </div>
+
+
+        <div class="security-note">
+
+            <span>🔒</span>
+
+            <span>
+                Your information is protected
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <footer>
+        SafeGuard Emergency Safety Platform
+    </footer>
+
+</main>
+
+
+<script>
+
+(function(){
+
+    "use strict";
+
+
+    const roles =
+        document.querySelectorAll(".role");
+
+    const googleButton =
+        document.getElementById("googleLogin");
+
+    const googleText =
+        document.getElementById("googleText");
+
+    const status =
+        document.getElementById("loginStatus");
+
+
+    let selectedRole =
+        localStorage.getItem("safeguard_role") || "child";
+
+
+    /* RESTORE ROLE */
+
+    roles.forEach(function(role){
+
+        role.classList.toggle(
+            "active",
+            role.dataset.role === selectedRole
+        );
+
+    });
+
+
+    /* ROLE SELECTION */
+
+    roles.forEach(function(role){
+
+        role.addEventListener("click",function(){
+
+            roles.forEach(function(item){
+
+                item.classList.remove("active");
+
+            });
+
+            role.classList.add("active");
+
+            selectedRole =
+                role.dataset.role || "child";
+
+            localStorage.setItem(
+                "safeguard_role",
+                selectedRole
+            );
+
+            status.textContent =
+                selectedRole === "parent"
+                    ? "Parent / Guardian selected."
+                    : "Child / User selected.";
+
+            status.className =
+                "status-info";
+
+        });
+
+    });
+
+
+    /* GOOGLE LOGIN */
+
+    googleButton.addEventListener(
+        "click",
+        async function(){
+
+            if(googleButton.disabled){
+                return;
+            }
+
+
+            localStorage.setItem(
+                "safeguard_role",
+                selectedRole
+            );
+
+
+            if(
+                typeof window.supabaseClient ===
+                "undefined"
+            ){
+
+                status.textContent =
+                    "Supabase client পাওয়া যাচ্ছে না। supabase.js check করো.";
+
+                status.className =
+                    "status-error";
+
+                return;
+            }
+
+
+            try{
+
+                googleButton.disabled = true;
+
+                googleText.textContent =
+                    "Connecting securely...";
+
+                status.textContent =
+                    "Google sign-in শুরু হচ্ছে...";
+
+                status.className =
+                    "status-info";
+
+
+                /*
+                 * IMPORTANT:
+                 * Role অনুযায়ী আলাদা dashboard
+                 */
+
+                const targetPage =
+                    selectedRole === "parent"
+                        ? "parent-dashboard.html"
+                        : "dashboard.html";
+
+
+                const redirectURL =
+                    new URL(
+                        targetPage,
+                        window.location.href
+                    );
+
+
+                redirectURL.searchParams.set(
+                    "role",
+                    selectedRole
+                );
+
+
+                console.log(
+                    "SafeGuard OAuth redirect:",
+                    redirectURL.href
+                );
+
+
+                const result =
+                    await window.supabaseClient
+                    .auth
+                    .signInWithOAuth({
+
+                        provider:"google",
+
+                        options:{
+                            redirectTo:
+                                redirectURL.href
+                        }
+
+                    });
+
+
+                if(result.error){
+
+                    throw result.error;
+
+                }
+
+
+                /*
+                 * Supabase normally redirects
+                 * automatically.
+                 */
+
+                if(
+                    result.data &&
+                    result.data.url
+                ){
+
+                    window.location.assign(
+                        result.data.url
+                    );
+
+                    return;
+                }
+
+
+                googleText.textContent =
+                    "Redirecting...";
+
+
+            }catch(error){
+
+                console.error(
+                    "Google OAuth Error:",
+                    error
+                );
+
+
+                status.textContent =
+                    error.message ||
+                    "Google sign-in শুরু করা যায়নি.";
+
+                status.className =
+                    "status-error";
+
+
+                googleButton.disabled =
+                    false;
+
+                googleText.textContent =
+                    "Continue with Google";
+
+            }
+
+        }
+    );
+
+})();
+
+</script>
+
+</body>
+</html>
