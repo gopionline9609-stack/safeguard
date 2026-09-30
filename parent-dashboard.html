@@ -241,7 +241,122 @@ body:before{
 
   box-shadow:0 12px 30px rgba(0,0,0,.25);
 }
+/* =========================================================
+   PREMIUM REFRESH BUTTON
+========================================================= */
 
+.refresh-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+
+  min-height:40px;
+  padding:9px 13px;
+
+  border-radius:12px;
+
+  border:1px solid rgba(54,229,255,.16);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(54,168,255,.10),
+      rgba(139,108,255,.08)
+    );
+
+  color:#cceeff;
+
+  font-size:11px;
+  font-weight:600;
+
+  cursor:pointer;
+
+  box-shadow:
+    0 0 20px rgba(54,168,255,.06),
+    inset 0 1px 0 rgba(255,255,255,.06);
+
+  transition:
+    transform .25s ease,
+    border-color .25s ease,
+    box-shadow .25s ease,
+    background .25s ease;
+
+  -webkit-tap-highlight-color:transparent;
+}
+
+.refresh-btn:hover{
+  transform:translateY(-2px);
+
+  border-color:
+    rgba(54,229,255,.38);
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(54,168,255,.17),
+      rgba(139,108,255,.12)
+    );
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.25),
+    0 0 28px rgba(54,168,255,.13);
+}
+
+.refresh-btn:active{
+  transform:scale(.94);
+}
+
+.refresh-btn:focus-visible{
+  outline:none;
+
+  box-shadow:
+    0 0 0 3px rgba(54,229,255,.10),
+    0 0 28px rgba(54,229,255,.18);
+}
+
+#refreshIcon{
+  display:inline-block;
+  font-size:17px;
+  line-height:1;
+
+  transition:transform .5s ease;
+}
+
+.refresh-btn.loading #refreshIcon{
+  animation:refreshSpin .8s linear infinite;
+}
+
+@keyframes refreshSpin{
+  to{
+    transform:rotate(360deg);
+  }
+}
+
+.refresh-btn.success{
+  border-color:
+    rgba(59,230,162,.35);
+
+  color:#82f3c5;
+
+  box-shadow:
+    0 0 25px rgba(59,230,162,.12);
+}
+
+@media(max-width:760px){
+
+  .refresh-btn{
+    min-width:40px;
+    width:40px;
+    height:40px;
+    padding:0;
+  }
+
+  .refresh-text{
+    display:none;
+  }
+
+}
 /* MAIN */
 
 .container{
@@ -1543,6 +1658,16 @@ body:before{
       class="logout"
       id="logoutBtn"
     >
+<button
+  class="refresh-btn"
+  id="refreshBtn"
+  type="button"
+  aria-label="Refresh dashboard"
+>
+  <span id="refreshIcon">↻</span>
+  <span class="refresh-text">Refresh</span>
+</button>
+
       Sign out
     </button>
 
@@ -2649,6 +2774,76 @@ $("logoutBtn").addEventListener(
   }
 );
 
+/* =========================================================
+   MANUAL REFRESH
+========================================================= */
+
+async function manualRefresh(){
+
+  const button=$("refreshBtn");
+  const icon=$("refreshIcon");
+
+  if(!button) return;
+
+  button.disabled=true;
+  button.classList.add("loading");
+  button.classList.remove("success");
+
+  icon.textContent="↻";
+
+  try{
+
+    const user=await getCurrentUser();
+
+    if(!user){
+      window.location.replace("index.html");
+      return;
+    }
+
+    await refreshDashboard(user);
+
+    button.classList.remove("loading");
+    button.classList.add("success");
+
+    icon.textContent="✓";
+
+    toast("Dashboard refreshed successfully.");
+
+    setTimeout(()=>{
+      button.classList.remove("success");
+      icon.textContent="↻";
+    },1800);
+
+  }catch(error){
+
+    console.error(
+      "SafeGuard manual refresh error:",
+      error
+    );
+
+    button.classList.remove("loading");
+
+    icon.textContent="!";
+
+    toast("Refresh failed. Please try again.");
+
+    setTimeout(()=>{
+      icon.textContent="↻";
+    },1800);
+
+  }finally{
+
+    button.disabled=false;
+
+  }
+
+}
+
+
+$("refreshBtn").addEventListener(
+  "click",
+  manualRefresh
+);
 
 /* =========================================================
    INITIALIZE
