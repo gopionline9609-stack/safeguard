@@ -1,1065 +1,260 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050812">
 <title>SafeGuard — Secure Emergency Protection</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-
 <style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
 :root{
-    --bg:#030712;
-    --blue:#36a8ff;
-    --cyan:#35e6ff;
-    --purple:#8b6cff;
-    --green:#3df2ae;
-    --red:#ff5274;
-    --text:#f5f8ff;
-    --muted:#8996ad;
+  --bg:#04060b;--panel:rgba(11,17,29,.72);--panel2:rgba(15,24,40,.62);
+  --line:rgba(148,163,184,.14);--text:#f4f8ff;--muted:#8491a8;
+  --cyan:#4de7ff;--blue:#4f8cff;--violet:#8b6cff;--green:#45e6a5;--red:#ff4d68;
 }
-
-html{
-    min-height:100%;
-}
-
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{
-    min-height:100vh;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    padding:20px;
-
-    font-family:
-        Inter,
-        Arial,
-        Helvetica,
-        sans-serif;
-
-    color:var(--text);
-
-    background:
-        radial-gradient(
-            circle at 15% 10%,
-            rgba(0,153,255,.22),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 85% 15%,
-            rgba(125,70,255,.22),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 50% 100%,
-            rgba(0,220,255,.13),
-            transparent 35%
-        ),
-        var(--bg);
-
-    overflow-x:hidden;
+  margin:0;min-height:100vh;color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(900px 600px at 15% 5%,rgba(59,130,246,.15),transparent 62%),
+    radial-gradient(800px 600px at 88% 18%,rgba(139,92,246,.13),transparent 60%),
+    radial-gradient(700px 500px at 50% 100%,rgba(34,211,238,.07),transparent 62%),
+    var(--bg);
+  overflow-x:hidden;
 }
-
-body::before,
-body::after{
-    content:"";
-
-    position:fixed;
-
-    width:360px;
-    height:360px;
-
-    border-radius:50%;
-
-    filter:blur(110px);
-
-    opacity:.18;
-
-    pointer-events:none;
-
-    z-index:-1;
-
-    animation:
-        floatingGlow
-        10s
-        ease-in-out
-        infinite
-        alternate;
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;
+  background-image:radial-gradient(rgba(255,255,255,.55) .6px,transparent .6px);
+  background-size:22px 22px;
+  mask-image:linear-gradient(to bottom,black,transparent 78%);
 }
-
-body::before{
-    background:#168cff;
-    left:-170px;
-    top:5%;
+a{text-decoration:none;color:inherit}
+button,input{font:inherit}
+button{cursor:pointer}
+.orb{position:fixed;border-radius:50%;filter:blur(70px);pointer-events:none;opacity:.22;animation:float 9s ease-in-out infinite}
+.orb.a{width:220px;height:220px;background:#247bff;left:-100px;top:20%}
+.orb.b{width:260px;height:260px;background:#7c3aed;right:-130px;top:42%;animation-delay:-3s}
+.orb.c{width:180px;height:180px;background:#06b6d4;left:42%;bottom:-90px;animation-delay:-6s}
+@keyframes float{50%{transform:translate3d(18px,-20px,0) scale(1.08)}}
+.shell{width:min(1180px,calc(100% - 32px));margin:auto}
+.topbar{
+  height:76px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(148,163,184,.08);position:relative;z-index:5;
 }
-
-body::after{
-    background:#7b3cff;
-    right:-170px;
-    bottom:5%;
-    animation-delay:3s;
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  width:43px;height:43px;border-radius:14px;display:grid;place-items:center;
+  font-weight:900;letter-spacing:-1px;color:#031019;
+  background:linear-gradient(135deg,#8ff7ff,#4da5ff 52%,#8b6cff);
+  box-shadow:0 0 35px rgba(77,231,255,.25),inset 0 1px rgba(255,255,255,.8);
+  position:relative;
 }
-
-@keyframes floatingGlow{
-
-    0%{
-        transform:translate(0,0) scale(1);
-    }
-
-    100%{
-        transform:translate(45px,-35px) scale(1.15);
-    }
+.logo:after{content:"";position:absolute;inset:-5px;border:1px solid rgba(77,231,255,.18);border-radius:18px;animation:ring 3s ease-in-out infinite}
+@keyframes ring{50%{transform:scale(1.08);opacity:.2}}
+.brand strong{display:block;font-size:14px;letter-spacing:.2px}
+.brand small{display:block;color:#6f7c94;font-size:8px;letter-spacing:1.8px;margin-top:3px}
+.secure{
+  display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);
+  border-radius:13px;background:rgba(255,255,255,.025);color:#aebbd0;font-size:9px;letter-spacing:1px;
+  backdrop-filter:blur(18px)
 }
-
-
-/* MAIN */
-
-.login-container{
-    width:min(500px,100%);
-    text-align:center;
-
-    animation:
-        pageIn
-        .8s
-        ease
-        forwards;
+.secure i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 4px var(--green);opacity:.65}}
+.hero{min-height:calc(100vh - 76px);display:grid;place-items:center;padding:70px 0 90px;position:relative}
+.hero-inner{text-align:center;max-width:900px;animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;padding:8px 13px;border-radius:999px;
+  border:1px solid rgba(77,231,255,.16);background:rgba(77,231,255,.045);
+  color:#91a8c8;font-size:9px;letter-spacing:2.4px;text-transform:uppercase;
+  box-shadow:0 0 35px rgba(77,231,255,.05)
 }
-
-@keyframes pageIn{
-
-    from{
-        opacity:0;
-        transform:
-            translateY(28px)
-            scale(.96);
-    }
-
-    to{
-        opacity:1;
-        transform:none;
-    }
+.eyebrow span{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+h1{
+  margin:25px 0 16px;font-size:clamp(46px,8vw,92px);line-height:.95;letter-spacing:-5px;
+  background:linear-gradient(105deg,#fff 12%,#dbeafe 38%,#73e8ff 64%,#9b82ff 82%,#fff);
+  background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shine 6s ease-in-out infinite alternate;
+  filter:drop-shadow(0 0 25px rgba(77,231,255,.12))
 }
-
-
-/* BRAND */
-
-.brand-icon{
-
-    width:72px;
-    height:72px;
-
-    margin:0 auto 15px;
-
-    display:grid;
-    place-items:center;
-
-    border-radius:22px;
-
-    font-size:34px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #157cff,
-            #00d9ff
-        );
-
-    border:
-        1px solid
-        rgba(255,255,255,.18);
-
-    box-shadow:
-        0 0 25px rgba(0,190,255,.35),
-        0 0 60px rgba(0,150,255,.18),
-        inset 0 1px 12px rgba(255,255,255,.30);
-
-    animation:
-        shieldPulse
-        3s
-        ease-in-out
-        infinite;
+@keyframes shine{to{background-position:100% 50%}}
+.subtitle{max-width:650px;margin:0 auto;color:#8d9bb1;font-size:14px;line-height:1.8}
+.role-card{
+  width:min(720px,100%);margin:42px auto 0;padding:22px;border:1px solid var(--line);
+  border-radius:25px;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+  box-shadow:0 30px 100px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.05);
+  backdrop-filter:blur(24px);position:relative;overflow:hidden
 }
-
-@keyframes shieldPulse{
-
-    0%,100%{
-        transform:scale(1);
-    }
-
-    50%{
-        transform:scale(1.04);
-    }
+.role-card:before{
+  content:"";position:absolute;inset:-2px;background:linear-gradient(110deg,transparent 20%,rgba(77,231,255,.09),transparent 45%);
+  transform:translateX(-120%);animation:sweep 6s linear infinite
 }
-
-.brand h1{
-
-    font-size:33px;
-    letter-spacing:-1.2px;
-
-    background:
-        linear-gradient(
-            90deg,
-            #ffffff,
-            #65ddff,
-            #9b87ff
-        );
-
-    -webkit-background-clip:text;
-    background-clip:text;
-
-    color:transparent;
-}
-
-.brand p{
-
-    margin-top:7px;
-
-    color:var(--muted);
-
-    font-size:13px;
-}
-
-
-/* CARD */
-
-.login-card{
-
-    position:relative;
-
-    margin-top:28px;
-
-    padding:31px 25px;
-
-    border-radius:29px;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(18,30,55,.91),
-            rgba(6,12,26,.88)
-        );
-
-    border:
-        1px solid
-        rgba(120,170,255,.17);
-
-    backdrop-filter:blur(25px);
-    -webkit-backdrop-filter:blur(25px);
-
-    box-shadow:
-        0 30px 90px rgba(0,0,0,.42),
-        inset 0 1px 0 rgba(255,255,255,.06);
-
-    overflow:hidden;
-}
-
-.login-card::before{
-
-    content:"";
-
-    position:absolute;
-
-    left:10%;
-    right:10%;
-    top:0;
-
-    height:1px;
-
-    background:
-        linear-gradient(
-            90deg,
-            transparent,
-            rgba(60,210,255,.8),
-            transparent
-        );
-
-    animation:
-        scanLine
-        4s
-        linear
-        infinite;
-}
-
-@keyframes scanLine{
-
-    0%{
-        transform:translateX(-40%);
-        opacity:0;
-    }
-
-    20%,
-    80%{
-        opacity:1;
-    }
-
-    100%{
-        transform:translateX(40%);
-        opacity:0;
-    }
-}
-
-
-/* SHIELD */
-
-.shield{
-
-    width:60px;
-    height:60px;
-
-    margin:0 auto 17px;
-
-    display:grid;
-    place-items:center;
-
-    border-radius:19px;
-
-    background:
-        rgba(50,160,255,.10);
-
-    border:
-        1px solid
-        rgba(70,180,255,.22);
-
-    font-size:28px;
-
-    box-shadow:
-        0 0 30px
-        rgba(0,170,255,.18);
-}
-
-
-/* TEXT */
-
-.login-card h2{
-    font-size:25px;
-}
-
-.login-description{
-
-    margin:
-        10px auto 23px;
-
-    max-width:390px;
-
-    color:var(--muted);
-
-    font-size:13px;
-
-    line-height:1.6;
-}
-
-
-/* ROLE */
-
-.role-title{
-
-    text-align:left;
-
-    font-size:12px;
-
-    color:#aab7cb;
-
-    margin-bottom:10px;
-}
-
-.role-grid{
-
-    display:grid;
-
-    grid-template-columns:1fr 1fr;
-
-    gap:11px;
-
-    margin-bottom:19px;
-}
-
+@keyframes sweep{to{transform:translateX(120%)}}
+.role-title{position:relative;color:#c4d0e4;font-size:11px;letter-spacing:1.7px;text-transform:uppercase;margin-bottom:15px}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative}
 .role{
-
-    appearance:none;
-    -webkit-appearance:none;
-
-    position:relative;
-
-    width:100%;
-
-    padding:17px 10px;
-
-    border-radius:17px;
-
-    border:
-        1px solid
-        rgba(255,255,255,.09);
-
-    background:
-        rgba(255,255,255,.035);
-
-    color:#dce6f8;
-
-    cursor:pointer;
-
-    font-family:inherit;
-
-    transition:.25s;
-
-    -webkit-tap-highlight-color:transparent;
-
-    user-select:none;
+  border:1px solid rgba(148,163,184,.13);background:rgba(255,255,255,.025);
+  color:#aebbd0;border-radius:19px;padding:18px;text-align:left;transition:.3s;position:relative;overflow:hidden
 }
-
-.role:hover{
-
-    transform:translateY(-3px);
-
-    border-color:
-        rgba(70,180,255,.38);
-
-    box-shadow:
-        0 10px 30px
-        rgba(0,140,255,.10);
+.role:hover{transform:translateY(-3px);border-color:rgba(77,231,255,.32);box-shadow:0 18px 45px rgba(0,0,0,.28),0 0 35px rgba(77,231,255,.06)}
+.role.active{border-color:rgba(77,231,255,.55);background:linear-gradient(145deg,rgba(77,231,255,.12),rgba(79,140,255,.055));box-shadow:0 0 35px rgba(77,231,255,.09)}
+.role .icon{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.055);margin-bottom:13px;font-size:19px}
+.role strong{display:block;font-size:13px;color:#eef5ff}.role small{display:block;margin-top:5px;color:#728097;font-size:9px;line-height:1.5}
+.role .check{position:absolute;right:13px;top:13px;width:18px;height:18px;border-radius:50%;border:1px solid rgba(148,163,184,.2);display:grid;place-items:center;font-size:10px;color:transparent}
+.role.active .check{color:#021219;background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 14px rgba(77,231,255,.5)}
+.google{
+  width:100%;margin-top:13px;height:54px;border:1px solid rgba(77,231,255,.28);border-radius:17px;
+  background:linear-gradient(135deg,#eefcff,#dceaff);color:#07101c;font-weight:850;letter-spacing:.1px;
+  display:flex;align-items:center;justify-content:center;gap:10px;position:relative;z-index:1;
+  box-shadow:0 14px 45px rgba(0,0,0,.28),0 0 35px rgba(77,231,255,.08);transition:.3s
 }
-
-.role:active{
-    transform:scale(.97);
+.google:hover{transform:translateY(-2px);box-shadow:0 20px 55px rgba(0,0,0,.34),0 0 45px rgba(77,231,255,.14)}
+.google:disabled{opacity:.55;cursor:wait;transform:none}
+.gmark{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:white;font-weight:900;color:#4285f4}
+.status{min-height:20px;margin-top:13px;color:#7f8da5;font-size:10px;line-height:1.5}
+.status.error{color:#ff7d91}.status.ok{color:#6ff0bc}
+.note{margin-top:15px;color:#5f6d84;font-size:8px;line-height:1.6}
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
+.feature{
+  padding:16px;border:1px solid rgba(148,163,184,.09);border-radius:18px;background:rgba(255,255,255,.018);
+  text-align:left;transition:.3s
 }
-
-.role.active{
-
-    border-color:
-        rgba(55,190,255,.75);
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(20,130,255,.23),
-            rgba(0,210,255,.09)
-        );
-
-    box-shadow:
-        0 0 25px
-        rgba(0,170,255,.17);
+.feature:hover{transform:translateY(-2px);background:rgba(255,255,255,.03)}
+.feature b{font-size:10px;color:#c8d4e7}.feature p{margin:5px 0 0;font-size:8px;line-height:1.55;color:#68768e}
+@media(max-width:680px){
+  .shell{width:min(100% - 22px,1180px)}.topbar{height:68px}.secure{display:none}
+  .hero{padding:52px 0 60px;min-height:calc(100vh - 68px)}
+  h1{letter-spacing:-3px;font-size:clamp(44px,14vw,70px)}
+  .subtitle{font-size:12px}.role-card{padding:15px;border-radius:22px}.roles{grid-template-columns:1fr}
+  .features{grid-template-columns:1fr}.feature{padding:14px}.role{padding:16px}
 }
-
-.role.active::after{
-
-    content:"✓";
-
-    position:absolute;
-
-    top:8px;
-    right:9px;
-
-    width:20px;
-    height:20px;
-
-    display:grid;
-    place-items:center;
-
-    border-radius:50%;
-
-    background:
-        linear-gradient(
-            135deg,
-            #20a8ff,
-            #31e0ff
-        );
-
-    color:white;
-
-    font-size:11px;
-    font-weight:900;
-}
-
-.role-icon{
-
-    display:block;
-
-    font-size:25px;
-
-    margin-bottom:7px;
-}
-
-.role strong{
-
-    display:block;
-
-    font-size:13px;
-}
-
-.role small{
-
-    display:block;
-
-    color:#718099;
-
-    margin-top:4px;
-
-    font-size:10px;
-}
-
-
-/* GOOGLE */
-
-.google-button{
-
-    width:100%;
-
-    min-height:54px;
-
-    border:0;
-
-    padding:15px;
-
-    border-radius:16px;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    gap:11px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #ffffff,
-            #eaf3ff
-        );
-
-    color:#111827;
-
-    font-family:inherit;
-
-    font-size:14px;
-
-    font-weight:800;
-
-    cursor:pointer;
-
-    transition:.25s;
-
-    box-shadow:
-        0 10px 35px
-        rgba(0,0,0,.25);
-
-    touch-action:manipulation;
-}
-
-.google-button:hover{
-
-    transform:translateY(-2px);
-
-    box-shadow:
-        0 16px 42px
-        rgba(40,150,255,.24);
-}
-
-.google-button:active{
-    transform:scale(.98);
-}
-
-.google-button:disabled{
-
-    cursor:wait;
-
-    opacity:.65;
-
-    transform:none;
-}
-
-.google-icon{
-
-    width:27px;
-    height:27px;
-
-    flex:none;
-
-    display:grid;
-    place-items:center;
-
-    border-radius:50%;
-
-    background:white;
-
-    color:#4285f4;
-
-    font-size:16px;
-
-    font-weight:900;
-}
-
-
-/* STATUS */
-
-#loginStatus{
-
-    margin-top:14px;
-
-    min-height:20px;
-
-    font-size:12px;
-
-    line-height:1.5;
-}
-
-.status-error{
-    color:#ff7188;
-}
-
-.status-success{
-    color:#45efad;
-}
-
-.status-info{
-    color:#6fdcff;
-}
-
-
-/* SECURITY */
-
-.security-note{
-
-    margin-top:18px;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    gap:7px;
-
-    color:#718099;
-
-    font-size:11px;
-}
-
-
-/* FOOTER */
-
-footer{
-
-    margin-top:22px;
-
-    color:#56647a;
-
-    font-size:10px;
-}
-
-
-/* MOBILE */
-
-@media(max-width:500px){
-
-    body{
-        padding:14px;
-    }
-
-    .login-card{
-
-        margin-top:23px;
-
-        padding:25px 17px;
-
-        border-radius:25px;
-    }
-
-    .brand h1{
-        font-size:29px;
-    }
-
-    .brand-icon{
-
-        width:64px;
-        height:64px;
-
-        font-size:30px;
-    }
-
-    .login-card h2{
-        font-size:22px;
-    }
-
-    .role{
-        padding:16px 7px;
-    }
-}
-
-@media(max-width:360px){
-
-    .role-grid{
-        gap:7px;
-    }
-
-    .role strong{
-        font-size:12px;
-    }
-
-    .role small{
-        font-size:9px;
-    }
-}
-
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>
 </head>
-
 <body>
+<div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
 
-<main class="login-container">
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="SafeGuard home">
+      <div class="logo">S</div>
+      <div><strong>SafeGuard</strong><small>SECURE EMERGENCY PROTECTION</small></div>
+    </a>
+    <div class="secure"><i></i> SECURE SESSION</div>
+  </header>
 
-    <div class="brand-icon">
-        🛡️
-    </div>
+  <main class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow"><span></span> FAMILY SAFETY NETWORK <span></span></div>
+      <h1>Protect. Connect.<br>Respond.</h1>
+      <p class="subtitle">
+        A secure emergency protection platform connecting children and trusted guardians
+        with location-aware safety tools and fast emergency response.
+      </p>
 
-    <div class="brand">
-
-        <h1>SafeGuard</h1>
-
-        <p>
-            Emergency protection, when you need it most.
-        </p>
-
-    </div>
-
-
-    <section class="login-card">
-
-        <div class="shield">
-            🛡️
+      <section class="role-card" aria-label="Choose your role">
+        <div class="role-title">Choose your access</div>
+        <div class="roles">
+          <button class="role active" type="button" data-role="child" aria-pressed="true">
+            <div class="icon">🛡️</div>
+            <strong>Child / User</strong>
+            <small>Safety tools, trusted guardian and emergency SOS.</small>
+            <span class="check">✓</span>
+          </button>
+          <button class="role" type="button" data-role="parent" aria-pressed="false">
+            <div class="icon">👨‍👩‍👧</div>
+            <strong>Parent / Guardian</strong>
+            <small>Family safety status, connected child and alerts.</small>
+            <span class="check">✓</span>
+          </button>
         </div>
 
-        <h2>
-            Welcome to SafeGuard
-        </h2>
-
-        <p class="login-description">
-            Choose your account type and securely sign in.
-        </p>
-
-
-        <div class="role-title">
-            I am signing in as
-        </div>
-
-
-        <div class="role-grid">
-
-            <button
-                type="button"
-                class="role active"
-                data-role="child">
-
-                <span class="role-icon">
-                    🧑
-                </span>
-
-                <strong>
-                    Child / User
-                </strong>
-
-                <small>
-                    Emergency protection
-                </small>
-
-            </button>
-
-
-            <button
-                type="button"
-                class="role"
-                data-role="parent">
-
-                <span class="role-icon">
-                    👨‍👩‍👧
-                </span>
-
-                <strong>
-                    Parent / Guardian
-                </strong>
-
-                <small>
-                    Safety monitoring
-                </small>
-
-            </button>
-
-        </div>
-
-
-        <button
-            type="button"
-            id="googleLogin"
-            class="google-button">
-
-            <span class="google-icon">
-                G
-            </span>
-
-            <span id="googleText">
-                Continue with Google
-            </span>
-
+        <button class="google" id="googleLogin" type="button">
+          <span class="gmark">G</span>
+          Continue securely with Google
         </button>
-
-
-        <div
-            id="loginStatus"
-            aria-live="polite">
+        <div class="status" id="authStatus" role="status" aria-live="polite"></div>
+        <div class="note">
+          Your selected role is used only to route you to the correct dashboard.
+          Account permissions should always be enforced by Supabase policies.
         </div>
+      </section>
 
-
-        <div class="security-note">
-
-            <span>🔒</span>
-
-            <span>
-                Your information is protected
-            </span>
-
-        </div>
-
-    </section>
-
-
-    <footer>
-        SafeGuard Emergency Safety Platform
-    </footer>
-
-</main>
-
+      <div class="features">
+        <div class="feature"><b>LOCATION AWARE</b><p>Permission-based GPS support for emergency situations.</p></div>
+        <div class="feature"><b>TRUSTED CONTACTS</b><p>Designed around verified guardian relationships.</p></div>
+        <div class="feature"><b>EMERGENCY READY</b><p>Built for a clear, focused SOS experience.</p></div>
+      </div>
+    </div>
+  </main>
+</div>
 
 <script>
+(() => {
+  const roleButtons = [...document.querySelectorAll(".role")];
+  const loginBtn = document.getElementById("googleLogin");
+  const status = document.getElementById("authStatus");
 
-(function(){
+  let selectedRole = localStorage.getItem("safeguard_role") || "child";
+  if (!["child","parent"].includes(selectedRole)) selectedRole = "child";
 
-    "use strict";
-
-
-    const roles =
-        document.querySelectorAll(".role");
-
-    const googleButton =
-        document.getElementById("googleLogin");
-
-    const googleText =
-        document.getElementById("googleText");
-
-    const status =
-        document.getElementById("loginStatus");
-
-
-    let selectedRole =
-        localStorage.getItem("safeguard_role") || "child";
-
-
-    /* RESTORE ROLE */
-
-    roles.forEach(function(role){
-
-        role.classList.toggle(
-            "active",
-            role.dataset.role === selectedRole
-        );
-
+  function renderRole() {
+    roleButtons.forEach(btn => {
+      const active = btn.dataset.role === selectedRole;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", String(active));
     });
+  }
+  renderRole();
 
-
-    /* ROLE SELECTION */
-
-    roles.forEach(function(role){
-
-        role.addEventListener("click",function(){
-
-            roles.forEach(function(item){
-
-                item.classList.remove("active");
-
-            });
-
-            role.classList.add("active");
-
-            selectedRole =
-                role.dataset.role || "child";
-
-            localStorage.setItem(
-                "safeguard_role",
-                selectedRole
-            );
-
-            status.textContent =
-                selectedRole === "parent"
-                    ? "Parent / Guardian selected."
-                    : "Child / User selected.";
-
-            status.className =
-                "status-info";
-
-        });
-
+  roleButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedRole = btn.dataset.role;
+      localStorage.setItem("safeguard_role", selectedRole);
+      renderRole();
+      status.className = "status";
+      status.textContent = selectedRole === "parent"
+        ? "Parent / Guardian access selected."
+        : "Child / User access selected.";
     });
+  });
 
+  loginBtn.addEventListener("click", async () => {
+    status.className = "status";
+    status.textContent = "Preparing secure Google sign-in…";
+    loginBtn.disabled = true;
 
-    /* GOOGLE LOGIN */
+    try {
+      if (!window.supabaseClient) {
+        throw new Error("Secure authentication service is not ready. Please refresh and try again.");
+      }
 
-    googleButton.addEventListener(
-        "click",
-        async function(){
+      localStorage.setItem("safeguard_role", selectedRole);
 
-            if(googleButton.disabled){
-                return;
-            }
+      const targetPage = selectedRole === "parent"
+        ? "parent-dashboard.html"
+        : "dashboard.html";
 
+      const redirectURL = new URL(targetPage, window.location.href);
+      redirectURL.searchParams.set("role", selectedRole);
 
-            localStorage.setItem(
-                "safeguard_role",
-                selectedRole
-            );
+      const { error } = await window.supabaseClient.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectURL.href }
+      });
 
-
-            if(
-                typeof window.supabaseClient ===
-                "undefined"
-            ){
-
-                status.textContent =
-                    "Supabase client পাওয়া যাচ্ছে না। supabase.js check করো.";
-
-                status.className =
-                    "status-error";
-
-                return;
-            }
-
-
-            try{
-
-                googleButton.disabled = true;
-
-                googleText.textContent =
-                    "Connecting securely...";
-
-                status.textContent =
-                    "Google sign-in শুরু হচ্ছে...";
-
-                status.className =
-                    "status-info";
-
-
-                /*
-                 * IMPORTANT:
-                 * Role অনুযায়ী আলাদা dashboard
-                 */
-
-                const targetPage =
-                    selectedRole === "parent"
-                        ? "parent-dashboard.html"
-                        : "dashboard.html";
-
-
-                const redirectURL =
-                    new URL(
-                        targetPage,
-                        window.location.href
-                    );
-
-
-                redirectURL.searchParams.set(
-                    "role",
-                    selectedRole
-                );
-
-
-                console.log(
-                    "SafeGuard OAuth redirect:",
-                    redirectURL.href
-                );
-
-
-                const result =
-                    await window.supabaseClient
-                    .auth
-                    .signInWithOAuth({
-
-                        provider:"google",
-
-                        options:{
-                            redirectTo:
-                                redirectURL.href
-                        }
-
-                    });
-
-
-                if(result.error){
-
-                    throw result.error;
-
-                }
-
-
-                /*
-                 * Supabase normally redirects
-                 * automatically.
-                 */
-
-                if(
-                    result.data &&
-                    result.data.url
-                ){
-
-                    window.location.assign(
-                        result.data.url
-                    );
-
-                    return;
-                }
-
-
-                googleText.textContent =
-                    "Redirecting...";
-
-
-            }catch(error){
-
-                console.error(
-                    "Google OAuth Error:",
-                    error
-                );
-
-
-                status.textContent =
-                    error.message ||
-                    "Google sign-in শুরু করা যায়নি.";
-
-                status.className =
-                    "status-error";
-
-
-                googleButton.disabled =
-                    false;
-
-                googleText.textContent =
-                    "Continue with Google";
-
-            }
-
-        }
-    );
-
+      if (error) throw error;
+    } catch (error) {
+      console.error(error);
+      status.className = "status error";
+      status.textContent = error?.message || "Unable to start Google sign-in.";
+      loginBtn.disabled = false;
+    }
+  });
 })();
-
 </script>
-
 </body>
 </html>
