@@ -545,6 +545,199 @@ body:before{
   font-size:11px;
 }
 
+/* =========================================================
+   PREMIUM INTERACTIVE STATUS CARDS
+========================================================= */
+
+.status-card-clickable{
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+
+  transform:translateZ(0);
+
+  transition:
+    transform .28s cubic-bezier(.2,.8,.2,1),
+    border-color .28s ease,
+    box-shadow .28s ease,
+    background .28s ease;
+}
+
+.status-card-clickable:hover{
+  transform:
+    translateY(-6px)
+    scale(1.012);
+
+  border-color:
+    rgba(77,190,255,.38);
+
+  box-shadow:
+    0 30px 85px rgba(0,0,0,.42),
+    0 0 42px rgba(40,170,255,.14),
+    inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.status-card-clickable:active{
+  transform:
+    translateY(-1px)
+    scale(.985);
+
+  transition-duration:.08s;
+}
+
+.status-card-clickable:focus-visible{
+  outline:none;
+
+  border-color:
+    rgba(54,229,255,.62);
+
+  box-shadow:
+    0 0 0 3px rgba(54,229,255,.10),
+    0 0 42px rgba(54,229,255,.22),
+    inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* Interactive icon */
+
+.status-card-clickable .status-icon{
+  transition:
+    transform .35s cubic-bezier(.2,.8,.2,1),
+    box-shadow .35s ease,
+    border-color .35s ease;
+}
+
+.status-card-clickable:hover .status-icon{
+  transform:
+    translateY(-2px)
+    rotate(-3deg)
+    scale(1.06);
+
+  border-color:
+    rgba(80,205,255,.42);
+
+  box-shadow:
+    0 0 35px rgba(30,175,255,.22),
+    inset 0 1px 12px rgba(255,255,255,.12);
+}
+
+/* Small click hint */
+
+.status-card-clickable:after{
+  content:"";
+
+  position:absolute;
+
+  width:120px;
+  height:120px;
+
+  left:50%;
+  top:50%;
+
+  border-radius:50%;
+
+  transform:
+    translate(-50%,-50%)
+    scale(.4);
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(54,229,255,.14),
+      transparent 68%
+    );
+
+  opacity:0;
+
+  pointer-events:none;
+
+  transition:
+    transform .5s ease,
+    opacity .5s ease;
+}
+
+.status-card-clickable:hover:after{
+  opacity:1;
+
+  transform:
+    translate(-50%,-50%)
+    scale(1.4);
+}
+
+
+/* =========================================================
+   EMERGENCY INTERACTIVE CARD
+========================================================= */
+
+.emergency-status-card{
+  border-color:
+    rgba(255,71,107,.14);
+}
+
+.emergency-status-card:hover{
+  border-color:
+    rgba(255,71,107,.46);
+
+  box-shadow:
+    0 30px 85px rgba(0,0,0,.42),
+    0 0 48px rgba(255,55,85,.16),
+    inset 0 0 30px rgba(255,40,70,.025);
+}
+
+.emergency-status-card.is-active{
+  border-color:
+    rgba(255,71,107,.58);
+
+  animation:
+    emergencyStatusGlow 1.8s ease-in-out infinite;
+}
+
+@keyframes emergencyStatusGlow{
+
+  0%,100%{
+    box-shadow:
+      0 24px 70px rgba(0,0,0,.30),
+      0 0 25px rgba(255,55,85,.10);
+  }
+
+  50%{
+    box-shadow:
+      0 28px 80px rgba(0,0,0,.38),
+      0 0 52px rgba(255,55,85,.25),
+      inset 0 0 25px rgba(255,40,70,.035);
+  }
+
+}
+
+
+/* =========================================================
+   MOBILE TOUCH EXPERIENCE
+========================================================= */
+
+@media(max-width:760px){
+
+  .status-card-clickable{
+    min-height:138px;
+
+    touch-action:manipulation;
+  }
+
+  .status-card-clickable:active{
+    transform:
+      scale(.975);
+
+    box-shadow:
+      0 15px 40px rgba(0,0,0,.35),
+      0 0 28px rgba(50,180,255,.14);
+  }
+
+  .emergency-status-card.is-active:active{
+    box-shadow:
+      0 15px 45px rgba(0,0,0,.38),
+      0 0 48px rgba(255,50,80,.25);
+  }
+
+}
+
 /* GENERIC CARD */
 
 .card{
@@ -1385,7 +1578,13 @@ body:before{
 
 <section class="status-grid">
 
-  <article class="status-card">
+  <article
+    class="status-card status-card-clickable"
+    id="childStatusCard"
+    role="button"
+    tabindex="0"
+    aria-label="Open connected child"
+  >
 
     <div class="status-top">
 
@@ -1413,7 +1612,13 @@ body:before{
   </article>
 
 
-  <article class="status-card">
+  <article
+    class="status-card status-card-clickable"
+    id="locationStatusCard"
+    role="button"
+    tabindex="0"
+    aria-label="Open child location"
+>
 
     <div class="status-top">
 
@@ -1441,9 +1646,12 @@ body:before{
 
 
   <article
-    class="status-card"
+    class="status-card status-card-clickable emergency-status-card"
     id="emergencyStatusCard"
-  >
+    role="button"
+    tabindex="0"
+    aria-label="Open emergency alerts"
+>
 
     <div class="status-top">
 
@@ -1474,7 +1682,10 @@ body:before{
 
 <!-- CONNECTED CHILD -->
 
-<section class="card child-card">
+<section
+  class="card child-card"
+  id="connectedChildSection"
+>
 
   <div class="child-header">
 
@@ -1568,7 +1779,10 @@ body:before{
 
 <!-- LOCATION -->
 
-<section class="card location-card">
+<section
+  class="card location-card"
+  id="locationCardSection"
+>
 
   <h3>
     📍 Child Location
@@ -1913,6 +2127,10 @@ function resetEmergencyUI(){
     "emergency-active"
   );
 
+$("emergencyStatusCard").classList.remove(
+  "is-active"
+);
+
   $("alertBadge").classList.remove(
     "active"
   );
@@ -1952,6 +2170,10 @@ function renderSOSAlert(alert){
   $("alertCard").classList.add(
     "emergency-active"
   );
+
+$("emergencyStatusCard").classList.add(
+  "is-active"
+);
 
   $("alertBadge").classList.add(
     "active"
@@ -2251,6 +2473,122 @@ async function loadLatestSOS(){
   renderSOSAlert(alert);
 }
 
+/* =========================================================
+   STATUS CARD NAVIGATION
+========================================================= */
+
+function scrollToSection(elementId, message){
+
+  const element=$(elementId);
+
+  if(!element) return;
+
+  element.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+
+  if(message){
+    toast(message);
+  }
+
+}
+
+
+/* =========================================================
+   CHILD ACCOUNT CARD
+========================================================= */
+
+function openChildAccount(){
+
+  scrollToSection(
+    "connectedChildSection",
+    "Connected child information opened."
+  );
+
+}
+
+
+/* =========================================================
+   LOCATION CARD
+========================================================= */
+
+function openChildLocation(){
+
+  scrollToSection(
+    "locationCardSection",
+    "Child location panel opened."
+  );
+
+}
+
+
+/* =========================================================
+   EMERGENCY CARD
+========================================================= */
+
+function openEmergencyAlerts(){
+
+  scrollToSection(
+    "alertCard",
+    "Emergency monitoring opened."
+  );
+
+}
+
+
+/* =========================================================
+   CLICK + KEYBOARD SUPPORT
+========================================================= */
+
+function activateCard(element, callback){
+
+  if(!element) return;
+
+  element.addEventListener(
+    "click",
+    callback
+  );
+
+  element.addEventListener(
+    "keydown",
+    function(event){
+
+      if(
+        event.key==="Enter" ||
+        event.key===" "
+      ){
+
+        event.preventDefault();
+
+        callback();
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   REGISTER STATUS CARDS
+========================================================= */
+
+activateCard(
+  $("childStatusCard"),
+  openChildAccount
+);
+
+activateCard(
+  $("locationStatusCard"),
+  openChildLocation
+);
+
+activateCard(
+  $("emergencyStatusCard"),
+  openEmergencyAlerts
+);
 
 /* =========================================================
    LOAD EVERYTHING
