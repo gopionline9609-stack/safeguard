@@ -2068,6 +2068,30 @@ body:before{
 
 }
 
+
+/* =========================================================
+   EMERGENCY CAMERA PREMIUM ACTIVE STATE
+========================================================= */
+.live-camera-card.is-live{
+  border-color:rgba(77,240,167,.32);
+  box-shadow:0 0 0 1px rgba(77,240,167,.05),0 30px 90px rgba(0,0,0,.45),0 0 65px rgba(77,240,167,.10);
+}
+.live-camera-card.is-live .parent-camera-shell{
+  box-shadow:inset 0 0 55px rgba(77,240,167,.06),0 0 45px rgba(77,240,167,.08);
+}
+.alert-badge.active{
+  border-color:rgba(255,77,112,.45)!important;
+  color:#ffd7df!important;
+  background:rgba(255,77,112,.12)!important;
+  box-shadow:0 0 25px rgba(255,77,112,.12);
+}
+.alert-box.active{
+  border-color:rgba(255,77,112,.35)!important;
+  background:linear-gradient(135deg,rgba(255,77,112,.10),rgba(155,108,255,.05));
+}
+@media(max-width:760px){
+  .live-camera-card{margin-top:16px!important;}
+}
 </style>
 </head>
 
@@ -2217,36 +2241,6 @@ body:before{
     </p>
 
   </article>
-<article class="card section">
-  <div class="section-head">
-    <div>
-      <h2 class="section-title">Emergency Camera</h2>
-      <div class="section-sub">
-        Live video from the child's device during an active SOS.
-      </div>
-    </div>
-
-    <div class="iconbox">🚨</div>
-  </div>
-
-  <div class="camera">
-    <div class="cam-label" id="parentCameraLabel">
-      WAITING FOR SOS CAMERA
-    </div>
-
-    <video
-      id="parentCameraVideo"
-      autoplay
-      playsinline
-      muted>
-    </video>
-
-    <div class="camera-overlay"></div>
-  </div>
-
-  <div id="parentCameraNotice" class="notice"></div>
-</article>
-
   <article
     class="status-card status-card-clickable emergency-status-card"
     id="emergencyStatusCard"
@@ -2390,8 +2384,8 @@ body:before{
       <h3>📷 Child Live Camera</h3>
 
       <p class="card-description">
-        Secure live camera stream from the connected child's device.
-        The child must enable Camera first.
+        Secure live camera stream from the connected child's device during an active SOS.
+        The child controls camera permission; SOS starts the emergency camera request.
       </p>
     </div>
 
@@ -2481,7 +2475,7 @@ body:before{
     </button>
 
     <span class="camera-security-note">
-      Child-controlled camera • No automatic permission request
+      SOS-controlled emergency camera • WebRTC live stream
     </span>
 
   </div>
@@ -2628,6 +2622,272 @@ body:before{
 "use strict";
 
 /* =========================================================
+   SAFEGUARD PARENT DASHBOARD CORE
+   - Auth/session guard
+   - Trusted-child discovery
+   - Emergency/SOS + location rendering
+   - SOS -> camera request bridge
+========================================================= */
+
+let parentUser = null;
+let connectedChildren = [];
+let activeEmergencyAlert = null;
+let cameraRequestedForAlertId = null;
+
+const $ = id => document.getElementById(id);
+
+function toast(message){
+  const el = $("toast");
+  if(!el) return;
+  el.textContent = message;
+  el.classList.add("show");
+  clearTimeout(window.__safeGuardToastTimer);
+  window.__safeGuardToastTimer = setTimeout(() => {
+    el.classList.remove("show");
+  }, 3200);
+}
+
+function escapeHtml(value){
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+async function getCurrentUser(){
+  if(!window.supabaseClient) return null;
+  const {data,error} = await window.supabaseClient.auth.getUser();
+  if(error || !data?.user){
+    if(error) console.warn("SafeGuard auth:", error);
+    return null;
+  }
+  return data.user;
+}
+
+async function checkParentAccess(){
+  const user = await getCurrentUser();
+  if(!user){
+    window.location.replace("index.html");
+    return null;
+  }
+
+  const selectedRole = localStorage.getItem("safeguard_role");
+  if(selectedRole === "child"){
+    window.location.replace("child-dashboard.html?role=child");
+    return null;
+  }
+
+  parentUser = user;
+  return user;
+}
+
+function renderParentAccount(user){
+  const email = $("parentEmail");
+  if(email) email.textContent = user?.email || "Signed-in guardian";
+}
+
+function setEmergencyVisual(active){
+  const card = $("emergencyStatusCard");
+  const dot = $("sosDot");
+  const badge = $("alertBadge");
+
+  if(card) card.classList.toggle("is-active", !!active);
+  if(dot){
+    dot.style.background = active ? "#ff4d70" : "#718099";
+    dot.style.boxShadow = active ? "0 0 14px rgba(255,77,112,.9)" : "none";
+  }
+  if(badge){
+    badge.textContent = active ? "SOS ACTIVE" : "MONITORING";
+    badge.classList.toggle("active", !!active);
+  }
+}
+
+function renderLocation(alert){
+  const hasCoords = Number.isFinite(Number(alert?.latitude)) &&
+                    Number.isFinite(Number(alert?.longitude));
+  const address = alert?.address && alert.address !== "Location unavailable"
+    ? alert.address
+    : null;
+
+  const locationStatus = $("locationStatus");
+  const locationDot = $("locationDot");
+  const locationValue = $("locationValue");
+  const mapTitle = $("mapTitle");
+  const mapDescription = $("mapDescription");
+
+  if(hasCoords){
+    const coords = `${Number(alert.latitude).toFixed(6)}, ${Number(alert.longitude).toFixed(6)}`;
+    if(locationStatus) locationStatus.textContent = address ? "Live emergency location shared" : `GPS: ${coords}`;
+    if(locationDot){
+      locationDot.style.background = "#4df0a7";
+      locationDot.style.boxShadow = "0 0 12px rgba(77,240,167,.75)";
+    }
+    if(locationValue) locationValue.textContent = address || coords;
+    if(mapTitle) mapTitle.textContent = address || coords;
+    if(mapDescription) mapDescription.textContent = `GPS coordinates: ${coords}`;
+  }else{
+    if(locationStatus) locationStatus.textContent = "Waiting for shared location";
+    if(locationDot){
+      locationDot.style.background = "#718099";
+      locationDot.style.boxShadow = "none";
+    }
+    if(locationValue) locationValue.textContent = "Not shared";
+    if(mapTitle) mapTitle.textContent = "Location not available";
+    if(mapDescription) mapDescription.textContent = "No location has been shared yet.";
+  }
+}
+
+function renderEmergencyAlert(alert){
+  activeEmergencyAlert = alert || null;
+  const active = alert?.status === "active";
+  setEmergencyVisual(active);
+
+  const status = $("emergencyStatus");
+  const box = $("alertBox");
+  const accountValue = $("accountValue");
+  const cameraValue = $("cameraValue");
+  const lastUpdate = $("lastUpdate");
+  const childEmail = $("childEmail");
+  const connectionBadge = $("connectionBadge");
+
+  if(active){
+    if(status) status.textContent = "🚨 SOS ACTIVE — emergency camera requested";
+    if(box){
+      const time = alert.created_at ? new Date(alert.created_at).toLocaleString() : "now";
+      const address = alert.address && alert.address !== "Location unavailable" ? alert.address : "Location unavailable";
+      box.innerHTML = `<strong>🚨 SOS ACTIVE</strong><br><span>Started ${escapeHtml(time)}</span><br><span>${escapeHtml(address)}</span>`;
+      box.classList.add("active");
+    }
+    if(accountValue) accountValue.textContent = "Emergency active";
+    if(cameraValue) cameraValue.textContent = "Emergency camera requested";
+    if(lastUpdate) lastUpdate.textContent = alert.created_at ? new Date(alert.created_at).toLocaleTimeString() : "Now";
+    if(connectionBadge) connectionBadge.textContent = "● EMERGENCY ACTIVE";
+  }else if(alert){
+    if(status) status.textContent = `Last emergency: ${alert.status || "recorded"}`;
+    if(box){
+      const time = alert.created_at ? new Date(alert.created_at).toLocaleString() : "Unknown time";
+      box.innerHTML = `<strong>Emergency record</strong><br><span>Status: ${escapeHtml(alert.status || "recorded")}</span><br><span>${escapeHtml(time)}</span>`;
+      box.classList.remove("active");
+    }
+    if(accountValue) accountValue.textContent = "Connected";
+    if(cameraValue) cameraValue.textContent = "Standby";
+    if(lastUpdate) lastUpdate.textContent = alert.created_at ? new Date(alert.created_at).toLocaleTimeString() : "—";
+    if(connectionBadge) connectionBadge.textContent = "● SYSTEM READY";
+  }else{
+    if(status) status.textContent = "No active emergency";
+    if(box){
+      box.textContent = "No emergency activity found.";
+      box.classList.remove("active");
+    }
+    if(accountValue) accountValue.textContent = connectedChildren.length ? "Connected" : "Waiting for connection";
+    if(cameraValue) cameraValue.textContent = "Standby";
+    if(lastUpdate) lastUpdate.textContent = "—";
+    if(connectionBadge) connectionBadge.textContent = connectedChildren.length ? "● SYSTEM READY" : "● WAITING";
+  }
+
+  renderLocation(alert);
+}
+
+async function loadConnectedChildren(user){
+  if(!user || !window.supabaseClient) return [];
+
+  const {data,error} = await window.supabaseClient
+    .from("trusted_contacts")
+    .select("user_id,child_email,parent_email,relationship,verified,created_at")
+    .eq("parent_email", (user.email || "").toLowerCase())
+    .order("created_at", {ascending:false});
+
+  if(error){
+    console.error("SafeGuard trusted child lookup:", error);
+    connectedChildren = [];
+    const status = $("childAccountStatus");
+    if(status) status.textContent = "Unable to load connected child";
+    return [];
+  }
+
+  const seen = new Set();
+  connectedChildren = (data || []).filter(row => {
+    if(!row?.user_id || seen.has(row.user_id)) return false;
+    seen.add(row.user_id);
+    return true;
+  });
+
+  const child = connectedChildren[0];
+  const childEmail = $("childEmail");
+  const status = $("childAccountStatus");
+  const childDot = $("childDot");
+
+  if(child){
+    if(childEmail) childEmail.textContent = child.child_email || "Connected child";
+    if(status) status.textContent = child.child_email || "Connected child";
+    if(childDot){
+      childDot.style.background = "#4df0a7";
+      childDot.style.boxShadow = "0 0 12px rgba(77,240,167,.75)";
+    }
+  }else{
+    if(childEmail) childEmail.textContent = "No child connected yet";
+    if(status) status.textContent = "Waiting for connected child";
+    if(childDot){
+      childDot.style.background = "#718099";
+      childDot.style.boxShadow = "none";
+    }
+  }
+
+  if(child?.user_id){
+    await setupParentCameraChannel(child.user_id);
+  }
+
+  return connectedChildren;
+}
+
+async function loadLatestSOS(){
+  if(!window.supabaseClient || !connectedChildren.length){
+    renderEmergencyAlert(null);
+    return null;
+  }
+
+  const ids = connectedChildren.map(row => row.user_id).filter(Boolean);
+  const {data,error} = await window.supabaseClient
+    .from("safety_alerts")
+    .select("id,child_user_id,child_email,alert_type,latitude,longitude,address,status,created_at")
+    .in("child_user_id", ids)
+    .eq("alert_type", "SOS")
+    .order("created_at", {ascending:false})
+    .limit(1);
+
+  if(error){
+    console.error("SafeGuard SOS lookup:", error);
+    return null;
+  }
+
+  const alert = data?.[0] || null;
+  renderEmergencyAlert(alert);
+
+  if(alert?.status === "active"){
+    await ensureEmergencyCamera(alert);
+  }else{
+    cameraRequestedForAlertId = null;
+    if(parentCameraPeer) closeParentCameraPeer();
+    setParentCameraStatus("offline", "Camera offline", "No active SOS camera session.");
+  }
+
+  return alert;
+}
+
+async function ensureEmergencyCamera(alert){
+  if(!alert?.id || alert.status !== "active") return;
+  if(!parentCameraChildId || parentCameraChildId !== alert.child_user_id) return;
+  if(cameraRequestedForAlertId === alert.id) return;
+  if(parentCameraPeer && ["connected","connecting"].includes(parentCameraPeer.connectionState)) return;
+  if(!parentCameraChannel || !parentCameraChannelReady) return;
+
+  cameraRequestedForAlertId = alert.id;
+  await requestChildCamera({force:true, alertId:alert.id});
+}
+
+/* =========================================================
    SAFEGUARD PARENT LIVE CAMERA — ROBUST WEBRTC
 ========================================================= */
 
@@ -2637,6 +2897,7 @@ let parentCameraPeer = null;
 let parentCameraChildId = null;
 let parentCameraUserId = null;
 let parentCameraSessionId = null;
+let parentCameraChannelReady = false;
 
 let parentCameraIceQueue = [];
 let parentCameraRemoteDescriptionSet = false;
@@ -3436,6 +3697,13 @@ function handleChildCameraState(
 
     );
 
+    if(activeEmergencyAlert?.status === "active" &&
+       activeEmergencyAlert.child_user_id === parentCameraChildId){
+      setTimeout(() => {
+        ensureEmergencyCamera(activeEmergencyAlert);
+      }, 150);
+    }
+
   }
 
 
@@ -3502,7 +3770,15 @@ function handleChildCameraState(
    REQUEST CHILD CAMERA
 ========================================================= */
 
-async function requestChildCamera(){
+async function requestChildCamera(options = {}){
+
+  const emergencyOnly = options.force !== true;
+
+  if(emergencyOnly && activeEmergencyAlert?.status !== "active"){
+    toast("Live camera is available during an active SOS.");
+    setParentCameraStatus("offline", "Camera waiting for SOS", "The emergency camera activates when the child sends an SOS.");
+    return false;
+  }
 
   if(!parentCameraChildId){
 
@@ -3597,8 +3873,10 @@ async function requestChildCamera(){
       "The parent could not contact the child camera."
 
     );
-
+    return false;
   }
+
+  return true;
 
 
   setTimeout(() => {
@@ -3671,6 +3949,8 @@ async function setupParentCameraChannel(
   /*
     Remove old channel.
   */
+
+  parentCameraChannelReady = false;
 
   if(parentCameraChannel){
 
@@ -3820,10 +4100,11 @@ async function setupParentCameraChannel(
         "SUBSCRIBED"
       ){
 
+        parentCameraChannelReady = true;
+
         console.log(
           "✓ Parent camera channel connected"
         );
-
 
         /*
           Give the child a moment to receive
@@ -3832,7 +4113,9 @@ async function setupParentCameraChannel(
 
         setTimeout(() => {
 
-          requestChildCamera();
+          if(activeEmergencyAlert?.status === "active") {
+            ensureEmergencyCamera(activeEmergencyAlert);
+          }
 
         },500);
 
@@ -3843,6 +4126,8 @@ async function setupParentCameraChannel(
         status ===
         "CHANNEL_ERROR"
       ){
+
+        parentCameraChannelReady = false;
 
         setParentCameraStatus(
 
@@ -3861,6 +4146,8 @@ async function setupParentCameraChannel(
         status ===
         "TIMED_OUT"
       ){
+
+        parentCameraChannelReady = false;
 
         setParentCameraStatus(
 
@@ -3927,133 +4214,6 @@ window.addEventListener(
 
   }
 );
-/* =========================================================
-   SETUP PARENT CAMERA CHANNEL
-========================================================= */
-
-async function setupParentCameraChannel(
-  childId
-){
-
-  if(!childId) return;
-
-
-  if(
-    parentCameraChildId === childId &&
-    parentCameraChannel
-  ){
-
-    return;
-
-  }
-
-
-  if(parentCameraChannel){
-
-    try{
-
-      await window.supabaseClient
-        .removeChannel(
-          parentCameraChannel
-        );
-
-    }catch(error){
-
-      console.warn(error);
-
-    }
-
-  }
-
-
-  closeParentCameraPeer();
-
-
-  parentCameraChildId =
-    childId;
-
-
-  const topic =
-    `safeguard-camera:${childId}`;
-
-
-  parentCameraChannel =
-    window.supabaseClient.channel(
-      topic,
-      {
-        config:{
-          private:true
-        }
-      }
-    );
-
-
-  parentCameraChannel
-
-    .on(
-      "broadcast",
-      {
-        event:"camera-offer"
-      },
-      ({payload}) => {
-
-        handleChildCameraOffer(
-          payload
-        );
-
-      }
-    )
-
-    .on(
-      "broadcast",
-      {
-        event:"camera-ice"
-      },
-      ({payload}) => {
-
-        handleChildCameraIce(
-          payload
-        );
-
-      }
-    )
-
-    .on(
-      "broadcast",
-      {
-        event:"camera-state"
-      },
-      ({payload}) => {
-
-        handleChildCameraState(
-          payload
-        );
-
-      }
-    );
-
-
-  parentCameraChannel.subscribe(
-    async status => {
-
-      if(status === "SUBSCRIBED"){
-
-        console.log(
-          "SafeGuard parent camera channel connected."
-        );
-
-        /* Automatically ask whether
-           child camera is currently active. */
-
-        await requestChildCamera();
-
-      }
-
-    }
-  );
-
-}
-
 /* =========================================================
    CARD NAVIGATION
 ========================================================= */
@@ -4186,15 +4346,14 @@ async function refreshDashboard(user){
       user
     );
 
-
   if(children.length){
-
     await loadLatestSOS();
-
   }else{
-
-    resetEmergencyUI();
-
+    activeEmergencyAlert = null;
+    cameraRequestedForAlertId = null;
+    renderEmergencyAlert(null);
+    closeParentCameraPeer();
+    setParentCameraStatus("offline", "Camera offline", "Connect a child account to enable emergency camera monitoring.");
   }
 
 }
