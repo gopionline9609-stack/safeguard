@@ -310,6 +310,23 @@ video{display:block;width:100%;height:300px;object-fit:cover;background:#02050a}
 let currentUser = null;
 let cameraStream = null;
 let locationWatchId = null;
+/* =========================================================
+   LIVE CAMERA — WEBRTC
+========================================================= */
+
+let cameraChannel = null;
+let cameraPeer = null;
+let cameraSessionId = null;
+let cameraRemoteIceQueue = [];
+
+const CAMERA_RTC_CONFIG = {
+  iceServers: [
+    {
+      urls: "stun:stun.l.google.com:19302"
+    }
+  ]
+};
+
 let lastCoords = null;
 let geocodeTimer = null;
 
@@ -641,6 +658,19 @@ async function startCamera(){
     $("cameraState").textContent =
       "● Camera active";
 
+/* Camera is now available for an authorized
+   parent WebRTC request. */
+
+if(cameraChannel){
+
+  await sendCameraSignal(
+    "camera-state",
+    {
+      state:"ready"
+    }
+  );
+
+}
 
     notice(
       "cameraNotice",
@@ -673,6 +703,495 @@ async function startCamera(){
 
 function stopCamera(){
 
+/* =========================================================
+   LIVE CAMERA — SUPABASE SIGNALING
+========================================================= */
+
+async function sendCameraSignal(event, payload = {}){
+
+  if(!cameraChannel) return;
+
+  try{
+
+    await cameraChannel.send({
+      type:"broadcast",
+      event,
+      payload:{
+        ...payload,
+        childId:currentUser?.id || null
+      }
+    });
+
+  }catch(error){
+
+    console.error(
+      "SafeGuard camera signal error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   CLOSE WEBRTC PEER
+========================================================= */
+
+function closeCameraPeer(){
+
+  if(cameraPeer){
+
+    try{
+      cameraPeer.onicecandidate = null;
+      cameraPeer.onconnectionstatechange = null;
+      cameraPeer.close();
+    }catch(error){
+      console.warn(error);
+    }
+
+  }
+
+  cameraPeer = null;
+  cameraSessionId = null;
+  cameraRemoteIceQueue = [];
+
+}
+
+
+/* =========================================================
+   CREATE CHILD PEER
+========================================================= */
+
+async function createChildCameraPeer(sessionId){
+
+  if(!cameraStream){
+
+    console.warn(
+      "SafeGuard: Camera stream is not active."
+    );
+
+    return;
+  }
+
+
+  closeCameraPeer();
+
+  cameraSessionId = sessionId;
+
+  cameraPeer =
+    new RTCPeerConnection(
+      CAMERA_RTC_CONFIG
+    );
+
+
+  /* Send camera track */
+
+  cameraStream
+    .getTracks()
+    .forEach(track => {
+
+      cameraPeer.addTrack(
+        track,
+        cameraStream
+      );
+
+    });
+
+
+  /* ICE */
+
+  cameraPeer.onicecandidate = event => {
+
+    if(!event.candidate) return;
+
+    sendCameraSignal(
+      "camera-ice",
+      {
+        sessionId,
+        candidate:event.candidate.toJSON()
+      }
+    );
+
+  };
+
+
+  /* Connection state */
+
+  cameraPeer.onconnectionstatechange = () => {
+
+    const state =
+      cameraPeer?.connectionState;
+
+
+    console.log(
+      "SafeGuard child camera connection:",
+      state
+    );
+
+
+    if(
+      state === "failed" ||
+      state === "closed" ||
+      state === "disconnected"
+    ){
+
+      console.warn(
+        "SafeGuard: Parent camera connection lost."
+      );
+
+    }
+
+  };
+
+
+  /* Create offer */
+
+  const offer =
+    await cameraPeer.createOffer({
+      offerToReceiveVideo:false,
+      offerToReceiveAudio:false
+    });
+
+
+  await cameraPeer.setLocalDescription(
+    offer
+  );
+
+
+  await sendCameraSignal(
+    "camera-offer",
+    {
+      sessionId,
+      sdp:cameraPeer.localDescription
+    }
+  );
+
+
+  console.log(
+    "SafeGuard: Camera offer sent."
+  );
+
+}
+
+
+/* =========================================================
+   HANDLE PARENT REQUEST
+========================================================= */
+
+async function handleCameraRequest(payload){
+
+  if(!cameraStream){
+
+    await sendCameraSignal(
+      "camera-state",
+      {
+        state:"offline"
+      }
+    );
+
+    return;
+  }
+
+
+  const sessionId =
+    payload?.sessionId;
+
+
+  if(!sessionId) return;
+
+
+  try{
+
+    await createChildCameraPeer(
+      sessionId
+    );
+
+    await sendCameraSignal(
+      "camera-state",
+      {
+        state:"live",
+        sessionId
+      }
+    );
+
+  }catch(error){
+
+    console.error(
+      "SafeGuard camera offer error:",
+      error
+    );
+
+    await sendCameraSignal(
+      "camera-state",
+      {
+        state:"error",
+        sessionId
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   HANDLE PARENT ANSWER
+========================================================= */
+
+async function handleCameraAnswer(payload){
+
+  if(!cameraPeer) return;
+
+  if(
+    payload?.sessionId !==
+    cameraSessionId
+  ){
+
+    return;
+  }
+
+
+  try{
+
+    await cameraPeer.setRemoteDescription(
+      new RTCSessionDescription(
+        payload.sdp
+      )
+    );
+
+
+    /* Add candidates that arrived early */
+
+    for(
+      const candidate
+      of cameraRemoteIceQueue
+    ){
+
+      try{
+
+        await cameraPeer.addIceCandidate(
+          new RTCIceCandidate(candidate)
+        );
+
+      }catch(error){
+
+        console.warn(
+          "SafeGuard queued ICE error:",
+          error
+        );
+
+      }
+
+    }
+
+
+    cameraRemoteIceQueue = [];
+
+
+  }catch(error){
+
+    console.error(
+      "SafeGuard camera answer error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   HANDLE PARENT ICE
+========================================================= */
+
+async function handleParentCameraIce(payload){
+
+  if(!payload?.candidate) return;
+
+  if(
+    payload?.sessionId !==
+    cameraSessionId
+  ){
+
+    return;
+  }
+
+
+  if(
+    !cameraPeer ||
+    !cameraPeer.remoteDescription
+  ){
+
+    cameraRemoteIceQueue.push(
+      payload.candidate
+    );
+
+    return;
+  }
+
+
+  try{
+
+    await cameraPeer.addIceCandidate(
+      new RTCIceCandidate(
+        payload.candidate
+      )
+    );
+
+  }catch(error){
+
+    console.warn(
+      "SafeGuard parent ICE error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SETUP CHILD CAMERA CHANNEL
+========================================================= */
+
+async function setupChildCameraChannel(){
+
+  if(!currentUser ||
+     !window.supabaseClient){
+
+    return;
+  }
+
+
+  if(cameraChannel){
+
+    try{
+      await window.supabaseClient
+        .removeChannel(cameraChannel);
+    }catch(error){
+      console.warn(error);
+    }
+
+    cameraChannel = null;
+  }
+
+
+  const topic =
+    `safeguard-camera:${currentUser.id}`;
+
+
+  cameraChannel =
+    window.supabaseClient.channel(
+      topic,
+      {
+        config:{
+          private:true
+        }
+      }
+    );
+
+
+  cameraChannel
+    .on(
+      "broadcast",
+      {
+        event:"camera-request"
+      },
+      ({payload}) => {
+
+        handleCameraRequest(
+          payload
+        );
+
+      }
+    )
+    .on(
+      "broadcast",
+      {
+        event:"camera-answer"
+      },
+      ({payload}) => {
+
+        handleCameraAnswer(
+          payload
+        );
+
+      }
+    )
+    .on(
+      "broadcast",
+      {
+        event:"camera-ice"
+      },
+      ({payload}) => {
+
+        handleParentCameraIce(
+          payload
+        );
+
+      }
+    )
+    .on(
+      "broadcast",
+      {
+        event:"camera-stop"
+      },
+      ({payload}) => {
+
+        if(
+          payload?.sessionId ===
+          cameraSessionId
+        ){
+
+          closeCameraPeer();
+
+        }
+
+      }
+    );
+
+
+  cameraChannel.subscribe(
+    (status,error) => {
+
+      if(status === "SUBSCRIBED"){
+
+        console.log(
+          "SafeGuard camera signaling connected."
+        );
+
+      }
+
+
+      if(
+        status === "CHANNEL_ERROR" ||
+        status === "TIMED_OUT"
+      ){
+
+        console.error(
+          "SafeGuard camera channel:",
+          error
+        );
+
+      }
+
+    }
+  );
+
+}
+closeCameraPeer();
+
+if(cameraChannel){
+
+  sendCameraSignal(
+    "camera-state",
+    {
+      state:"offline"
+    }
+  );
+
+}
   if(cameraStream){
 
     cameraStream
@@ -1395,9 +1914,11 @@ $("logoutBtn")
 
   if(user){
 
-    await loadTrustedContacts();
+  await loadTrustedContacts();
 
-  }
+  await setupChildCameraChannel();
+
+}
 
 })();
 </script>

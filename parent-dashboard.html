@@ -1674,6 +1674,400 @@ body:before{
 
 }
 
+/* =========================================================
+   PREMIUM CHILD LIVE CAMERA
+========================================================= */
+
+.live-camera-card{
+  grid-column:1/-1;
+  padding:25px;
+  margin-top:18px;
+  border-color:rgba(91,190,255,.16);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(17,29,53,.88),
+      rgba(6,12,25,.82)
+    );
+}
+
+.live-camera-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:18px;
+}
+
+.live-camera-kicker{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#9feaff;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:1.8px;
+  margin-bottom:8px;
+}
+
+.live-camera-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#718099;
+  box-shadow:none;
+  transition:.3s;
+}
+
+.live-camera-card.is-live .live-camera-dot{
+  background:#4df0a7;
+  box-shadow:
+    0 0 7px #4df0a7,
+    0 0 18px rgba(77,240,167,.65);
+  animation:cameraLiveBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes cameraLiveBlink{
+  50%{
+    opacity:.35;
+    transform:scale(.72);
+  }
+}
+
+.live-camera-header h3{
+  margin:0 0 6px;
+  font-size:19px;
+}
+
+.camera-live-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 11px;
+  border-radius:999px;
+  color:#a8b6c9;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(150,180,230,.14);
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:1px;
+  white-space:nowrap;
+}
+
+.camera-live-badge.live{
+  color:#caffea;
+  background:rgba(77,240,167,.09);
+  border-color:rgba(77,240,167,.25);
+  box-shadow:0 0 24px rgba(77,240,167,.12);
+}
+
+.camera-live-badge.connecting{
+  color:#d9eaff;
+  background:rgba(53,230,255,.08);
+  border-color:rgba(53,230,255,.25);
+}
+
+.camera-live-badge.error{
+  color:#ffd0d9;
+  background:rgba(255,77,112,.08);
+  border-color:rgba(255,77,112,.25);
+}
+
+.parent-camera-shell{
+  min-height:430px;
+  position:relative;
+  overflow:hidden;
+  border-radius:22px;
+  border:1px solid rgba(110,180,255,.17);
+  background:
+    radial-gradient(
+      circle at 50% 20%,
+      rgba(53,230,255,.08),
+      transparent 38%
+    ),
+    #02050b;
+  box-shadow:
+    inset 0 0 60px rgba(0,0,0,.35),
+    0 20px 60px rgba(0,0,0,.22);
+}
+
+.parent-camera-shell:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:4;
+  border-radius:inherit;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.025),
+    inset 0 0 70px rgba(53,230,255,.025);
+}
+
+#parentCameraVideo{
+  display:block;
+  width:100%;
+  height:430px;
+  object-fit:cover;
+  background:#02050b;
+  opacity:0;
+  transition:
+    opacity .5s ease,
+    transform .8s ease;
+}
+
+.live-camera-card.is-live #parentCameraVideo{
+  opacity:1;
+}
+
+.parent-camera-overlay{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0,0,0,.45),
+      transparent 24%,
+      transparent 72%,
+      rgba(0,0,0,.58)
+    );
+}
+
+.camera-scanline{
+  position:absolute;
+  left:0;
+  right:0;
+  top:-10%;
+  height:2px;
+  z-index:5;
+  pointer-events:none;
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(53,230,255,.5),
+    transparent
+  );
+  opacity:0;
+}
+
+.live-camera-card.is-live .camera-scanline{
+  opacity:.35;
+  animation:cameraScan 4.5s linear infinite;
+}
+
+@keyframes cameraScan{
+  from{top:-5%}
+  to{top:105%}
+}
+
+.parent-camera-topbar{
+  position:absolute;
+  top:14px;
+  left:14px;
+  right:14px;
+  z-index:6;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  color:#b9c9dc;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.7px;
+}
+
+.camera-secure-label{
+  padding:7px 9px;
+  border-radius:9px;
+  background:rgba(3,7,14,.64);
+  border:1px solid rgba(150,190,255,.1);
+  backdrop-filter:blur(14px);
+}
+
+.parent-camera-topbar > span:last-child{
+  color:#93a8c2;
+  padding:7px 9px;
+  border-radius:9px;
+  background:rgba(3,7,14,.54);
+  backdrop-filter:blur(14px);
+}
+
+.parent-camera-empty{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:9px;
+  text-align:center;
+  padding:30px;
+}
+
+.live-camera-card.is-live .parent-camera-empty{
+  opacity:0;
+  pointer-events:none;
+}
+
+.camera-empty-icon{
+  width:74px;
+  height:74px;
+  display:grid;
+  place-items:center;
+  border-radius:22px;
+  font-size:30px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(53,230,255,.08),
+      rgba(155,108,255,.09)
+    );
+  border:1px solid rgba(100,180,255,.15);
+  box-shadow:
+    0 0 40px rgba(53,230,255,.08);
+  margin-bottom:5px;
+}
+
+.parent-camera-empty strong{
+  font-size:16px;
+}
+
+.parent-camera-empty span{
+  max-width:380px;
+  color:#778ba5;
+  font-size:12px;
+  line-height:1.55;
+}
+
+.parent-camera-footer{
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:13px;
+  z-index:6;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  color:#9eb0c5;
+  font-size:10px;
+  font-weight:750;
+}
+
+.parent-camera-footer > span:first-child{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.signal-dot{
+  width:7px;
+  height:7px;
+  display:inline-block;
+  border-radius:50%;
+  background:#718099;
+  box-shadow:none;
+}
+
+.live-camera-card.is-live .signal-dot{
+  background:#4df0a7;
+  box-shadow:0 0 12px rgba(77,240,167,.8);
+}
+
+.camera-control-row{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  margin-top:13px;
+  flex-wrap:wrap;
+}
+
+.camera-request-btn{
+  border:1px solid rgba(75,190,255,.28);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(53,230,255,.12),
+      rgba(90,112,255,.12)
+    );
+  color:#dff9ff;
+  padding:11px 15px;
+  border-radius:13px;
+  font-weight:850;
+  cursor:pointer;
+  transition:.22s;
+  box-shadow:0 8px 25px rgba(53,130,255,.08);
+}
+
+.camera-request-btn:hover{
+  transform:translateY(-2px);
+  border-color:rgba(80,220,255,.48);
+  box-shadow:
+    0 12px 32px rgba(53,130,255,.15),
+    0 0 25px rgba(53,230,255,.08);
+}
+
+.camera-request-btn:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  transform:none;
+}
+
+.camera-security-note{
+  color:#71839b;
+  font-size:10px;
+}
+
+@media(max-width:760px){
+
+  .live-camera-card{
+    padding:18px;
+  }
+
+  .live-camera-header{
+    flex-direction:column;
+  }
+
+  .parent-camera-shell,
+  #parentCameraVideo{
+    min-height:310px;
+    height:310px;
+  }
+
+  .parent-camera-topbar{
+    font-size:9px;
+  }
+
+}
+
+@media(max-width:560px){
+
+  .parent-camera-shell,
+  #parentCameraVideo{
+    min-height:250px;
+    height:250px;
+  }
+
+  .parent-camera-topbar{
+    left:10px;
+    right:10px;
+    top:10px;
+  }
+
+  .parent-camera-footer{
+    left:10px;
+    right:10px;
+    bottom:9px;
+  }
+
+  .camera-security-note{
+    width:100%;
+  }
+
+}
+
 </style>
 </head>
 
@@ -1955,7 +2349,116 @@ body:before{
   </div>
 
 </section>
+<section class="card live-camera-card" id="liveCameraSection">
 
+  <div class="live-camera-header">
+
+    <div>
+      <div class="live-camera-kicker">
+        <span class="live-camera-dot"></span>
+        FAMILY LIVE MONITOR
+      </div>
+
+      <h3>📷 Child Live Camera</h3>
+
+      <p class="card-description">
+        Secure live camera stream from the connected child's device.
+        The child must enable Camera first.
+      </p>
+    </div>
+
+    <span class="camera-live-badge" id="parentCameraBadge">
+      OFFLINE
+    </span>
+
+  </div>
+
+
+  <div class="parent-camera-shell">
+
+    <video
+      id="parentCameraVideo"
+      autoplay
+      playsinline
+      muted
+    ></video>
+
+
+    <div class="parent-camera-overlay"></div>
+
+
+    <div class="camera-scanline"></div>
+
+
+    <div class="parent-camera-topbar">
+
+      <span class="camera-secure-label">
+        🔐 SECURE WEBRTC
+      </span>
+
+      <span id="parentCameraQuality">
+        Waiting for child camera
+      </span>
+
+    </div>
+
+
+    <div
+      class="parent-camera-empty"
+      id="parentCameraEmpty"
+    >
+
+      <div class="camera-empty-icon">
+        📷
+      </div>
+
+      <strong id="parentCameraTitle">
+        Camera offline
+      </strong>
+
+      <span id="parentCameraDescription">
+        Ask the child to enable Camera on their device.
+      </span>
+
+    </div>
+
+
+    <div class="parent-camera-footer">
+
+      <span>
+        <i class="signal-dot"></i>
+        <span id="parentCameraConnection">
+          Awaiting connection
+        </span>
+      </span>
+
+      <span id="parentCameraTime">
+        —
+      </span>
+
+    </div>
+
+  </div>
+
+
+  <div class="camera-control-row">
+
+    <button
+      class="camera-request-btn"
+      id="requestCameraBtn"
+      type="button"
+    >
+      <span>◉</span>
+      Request Live Camera
+    </button>
+
+    <span class="camera-security-note">
+      Child-controlled camera • No automatic permission request
+    </span>
+
+  </div>
+
+</section>
 
 <!-- LOCATION -->
 
@@ -2095,6 +2598,25 @@ body:before{
 
 <script>
 "use strict";
+
+/* =========================================================
+   CHILD LIVE CAMERA — WEBRTC
+========================================================= */
+
+let parentCameraChannel = null;
+let parentCameraPeer = null;
+let parentCameraChildId = null;
+let parentCameraSessionId = null;
+let parentCameraIceQueue = [];
+let parentCameraLastLiveAt = null;
+
+const PARENT_CAMERA_RTC_CONFIG = {
+  iceServers:[
+    {
+      urls:"stun:stun.l.google.com:19302"
+    }
+  ]
+};
 
 /* =========================================================
    SAFEGUARD PARENT COMMAND CENTER
@@ -2338,6 +2860,9 @@ async function loadConnectedChildren(user){
   const child =
     connectedChildren[0];
 
+    await setupParentCameraChannel(
+  child.user_id
+);
 
   $("childAccountStatus").textContent =
     "Connected child account";
@@ -2771,6 +3296,8 @@ function renderSOSAlert(alert){
 
 async function loadLatestSOS(){
 
+
+
   if(!connectedChildren.length){
 
     resetEmergencyUI();
@@ -2882,6 +3409,789 @@ async function loadLatestSOS(){
 
 }
 
+/* =========================================================
+   PARENT LIVE CAMERA UI
+========================================================= */
+
+function setParentCameraStatus(
+  state,
+  title,
+  description
+){
+
+  const card =
+    $("liveCameraSection");
+
+  const badge =
+    $("parentCameraBadge");
+
+  const empty =
+    $("parentCameraEmpty");
+
+  const titleEl =
+    $("parentCameraTitle");
+
+  const descEl =
+    $("parentCameraDescription");
+
+  const connection =
+    $("parentCameraConnection");
+
+  const quality =
+    $("parentCameraQuality");
+
+
+  if(!card) return;
+
+
+  card.classList.toggle(
+    "is-live",
+    state === "live"
+  );
+
+
+  badge.className =
+    "camera-live-badge";
+
+
+  if(state === "live"){
+
+    badge.classList.add("live");
+    badge.textContent = "● LIVE";
+
+    connection.textContent =
+      "Live camera connected";
+
+    quality.textContent =
+      "Secure WebRTC stream";
+
+
+    parentCameraLastLiveAt =
+      new Date();
+
+
+    $("parentCameraTime").textContent =
+      parentCameraLastLiveAt
+        .toLocaleTimeString();
+
+  }
+
+
+  else if(state === "connecting"){
+
+    badge.classList.add("connecting");
+    badge.textContent = "CONNECTING";
+
+    connection.textContent =
+      "Establishing secure connection";
+
+    quality.textContent =
+      "Negotiating WebRTC…";
+
+  }
+
+
+  else if(state === "error"){
+
+    badge.classList.add("error");
+    badge.textContent = "ERROR";
+
+    connection.textContent =
+      "Camera connection failed";
+
+    quality.textContent =
+      "Connection unavailable";
+
+  }
+
+
+  else{
+
+    badge.textContent =
+      "OFFLINE";
+
+    connection.textContent =
+      "Awaiting child camera";
+
+    quality.textContent =
+      "Waiting for child camera";
+
+  }
+
+
+  titleEl.textContent =
+    title;
+
+
+  descEl.textContent =
+    description;
+
+}
+
+
+function clearParentCameraVideo(){
+
+  const video =
+    $("parentCameraVideo");
+
+  if(video){
+
+    video.pause();
+    video.srcObject = null;
+
+  }
+
+}
+
+
+/* =========================================================
+   CLOSE PARENT PEER
+========================================================= */
+
+function closeParentCameraPeer(){
+
+  if(parentCameraPeer){
+
+    try{
+
+      parentCameraPeer.ontrack = null;
+      parentCameraPeer.onicecandidate = null;
+      parentCameraPeer.onconnectionstatechange = null;
+
+      parentCameraPeer.close();
+
+    }catch(error){
+
+      console.warn(error);
+
+    }
+
+  }
+
+
+  parentCameraPeer = null;
+  parentCameraSessionId = null;
+  parentCameraIceQueue = [];
+
+  clearParentCameraVideo();
+
+}
+
+
+/* =========================================================
+   SEND PARENT CAMERA SIGNAL
+========================================================= */
+
+async function sendParentCameraSignal(
+  event,
+  payload = {}
+){
+
+  if(!parentCameraChannel) return;
+
+  try{
+
+    await parentCameraChannel.send({
+
+      type:"broadcast",
+
+      event,
+
+      payload:{
+        ...payload,
+        parentId:
+        null
+      }
+
+    });
+
+  }catch(error){
+
+    console.error(
+      "SafeGuard parent camera signal:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   CREATE PARENT PEER
+========================================================= */
+
+function createParentCameraPeer(){
+
+  closeParentCameraPeer();
+
+
+  parentCameraPeer =
+    new RTCPeerConnection(
+      PARENT_CAMERA_RTC_CONFIG
+    );
+
+
+  parentCameraPeer.ontrack =
+    event => {
+
+      const video =
+        $("parentCameraVideo");
+
+      if(!video) return;
+
+
+      if(
+        event.streams &&
+        event.streams[0]
+      ){
+
+        video.srcObject =
+          event.streams[0];
+
+      }else{
+
+        const stream =
+          new MediaStream();
+
+        stream.addTrack(
+          event.track
+        );
+
+        video.srcObject =
+          stream;
+
+      }
+
+
+      video.play().catch(() => {});
+
+
+      setParentCameraStatus(
+        "live",
+        "Live camera connected",
+        "The connected child's camera is currently streaming."
+      );
+
+    };
+
+
+  parentCameraPeer.onicecandidate =
+    event => {
+
+      if(!event.candidate) return;
+
+
+      sendParentCameraSignal(
+        "camera-ice",
+        {
+          sessionId:
+            parentCameraSessionId,
+
+          candidate:
+            event.candidate.toJSON()
+        }
+      );
+
+    };
+
+
+  parentCameraPeer.onconnectionstatechange =
+    () => {
+
+      const state =
+        parentCameraPeer?.connectionState;
+
+
+      if(state === "connected"){
+
+        setParentCameraStatus(
+          "live",
+          "Live camera connected",
+          "Secure WebRTC camera stream is active."
+        );
+
+      }
+
+
+      if(
+        state === "failed" ||
+        state === "closed"
+      ){
+
+        setParentCameraStatus(
+          "error",
+          "Camera connection lost",
+          "The child camera stream is no longer available."
+        );
+
+      }
+
+
+      if(state === "disconnected"){
+
+        setParentCameraStatus(
+          "connecting",
+          "Camera reconnecting",
+          "Trying to restore the live camera connection…"
+        );
+
+      }
+
+    };
+
+
+  return parentCameraPeer;
+
+}
+
+
+/* =========================================================
+   HANDLE CHILD OFFER
+========================================================= */
+
+async function handleChildCameraOffer(payload){
+
+  if(
+    !payload?.sdp ||
+    !payload?.sessionId
+  ){
+
+    return;
+  }
+
+
+  if(
+    payload.sessionId !==
+    parentCameraSessionId
+  ){
+
+    return;
+  }
+
+
+  try{
+
+    const pc =
+      parentCameraPeer ||
+      createParentCameraPeer();
+
+
+    await pc.setRemoteDescription(
+      new RTCSessionDescription(
+        payload.sdp
+      )
+    );
+
+
+    /* Add ICE received before SDP */
+
+    for(
+      const candidate
+      of parentCameraIceQueue
+    ){
+
+      try{
+
+        await pc.addIceCandidate(
+          new RTCIceCandidate(candidate)
+        );
+
+      }catch(error){
+
+        console.warn(
+          "SafeGuard queued child ICE:",
+          error
+        );
+
+      }
+
+    }
+
+
+    parentCameraIceQueue = [];
+
+
+    const answer =
+      await pc.createAnswer();
+
+
+    await pc.setLocalDescription(
+      answer
+    );
+
+
+    await sendParentCameraSignal(
+      "camera-answer",
+      {
+        sessionId:
+          parentCameraSessionId,
+
+        sdp:
+          pc.localDescription
+      }
+    );
+
+
+    setParentCameraStatus(
+      "connecting",
+      "Connecting to child camera",
+      "Camera offer received. Establishing secure video connection…"
+    );
+
+
+  }catch(error){
+
+    console.error(
+      "SafeGuard parent camera offer:",
+      error
+    );
+
+
+    setParentCameraStatus(
+      "error",
+      "Camera connection failed",
+      "The WebRTC camera session could not be established."
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   HANDLE CHILD ICE
+========================================================= */
+
+async function handleChildCameraIce(payload){
+
+  if(!payload?.candidate) return;
+
+
+  if(
+    payload.sessionId !==
+    parentCameraSessionId
+  ){
+
+    return;
+  }
+
+
+  if(
+    !parentCameraPeer ||
+    !parentCameraPeer.remoteDescription
+  ){
+
+    parentCameraIceQueue.push(
+      payload.candidate
+    );
+
+    return;
+  }
+
+
+  try{
+
+    await parentCameraPeer.addIceCandidate(
+      new RTCIceCandidate(
+        payload.candidate
+      )
+    );
+
+  }catch(error){
+
+    console.warn(
+      "SafeGuard child ICE error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   HANDLE CHILD CAMERA STATE
+========================================================= */
+
+function handleChildCameraState(payload){
+
+  if(!payload) return;
+
+
+  if(payload.state === "ready"){
+
+    setParentCameraStatus(
+      "connecting",
+      "Child camera ready",
+      "The child's camera is enabled. Establishing secure live view…"
+    );
+
+  }
+
+
+  if(payload.state === "live"){
+
+    setParentCameraStatus(
+      "connecting",
+      "Connecting to child camera",
+      "Live camera negotiation is in progress…"
+    );
+
+  }
+
+
+  if(payload.state === "offline"){
+
+    closeParentCameraPeer();
+
+
+    setParentCameraStatus(
+      "offline",
+      "Camera offline",
+      "Ask the child to enable Camera on their device."
+    );
+
+  }
+
+
+  if(payload.state === "error"){
+
+    setParentCameraStatus(
+      "error",
+      "Camera unavailable",
+      "The child camera could not be connected."
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   REQUEST CHILD CAMERA
+========================================================= */
+
+async function requestChildCamera(){
+
+  if(!parentCameraChildId){
+
+    toast(
+      "No connected child is available."
+    );
+
+    return;
+
+  }
+
+
+  if(!parentCameraChannel){
+
+    toast(
+      "Camera connection is still starting."
+    );
+
+    return;
+
+  }
+
+
+  const button =
+    $("requestCameraBtn");
+
+
+  if(button){
+
+    button.disabled = true;
+
+    button.innerHTML =
+      "<span>◌</span> Connecting…";
+
+  }
+
+
+  closeParentCameraPeer();
+
+
+  parentCameraSessionId =
+    crypto.randomUUID();
+
+
+  createParentCameraPeer();
+
+
+  setParentCameraStatus(
+    "connecting",
+    "Requesting live camera",
+    "Waiting for the child device to provide its active camera stream…"
+  );
+
+
+  try{
+
+    await sendParentCameraSignal(
+      "camera-request",
+      {
+        sessionId:
+          parentCameraSessionId
+      }
+    );
+
+  }catch(error){
+
+    console.error(error);
+
+    setParentCameraStatus(
+      "error",
+      "Camera request failed",
+      "Could not contact the child camera."
+    );
+
+  }
+
+
+  setTimeout(() => {
+
+    if(button){
+
+      button.disabled = false;
+
+      button.innerHTML =
+        "<span>◉</span> Request Live Camera";
+
+    }
+
+  },1800);
+
+}
+
+
+/* =========================================================
+   SETUP PARENT CAMERA CHANNEL
+========================================================= */
+
+async function setupParentCameraChannel(
+  childId
+){
+
+  if(!childId) return;
+
+
+  if(
+    parentCameraChildId === childId &&
+    parentCameraChannel
+  ){
+
+    return;
+
+  }
+
+
+  if(parentCameraChannel){
+
+    try{
+
+      await window.supabaseClient
+        .removeChannel(
+          parentCameraChannel
+        );
+
+    }catch(error){
+
+      console.warn(error);
+
+    }
+
+  }
+
+
+  closeParentCameraPeer();
+
+
+  parentCameraChildId =
+    childId;
+
+
+  const topic =
+    `safeguard-camera:${childId}`;
+
+
+  parentCameraChannel =
+    window.supabaseClient.channel(
+      topic,
+      {
+        config:{
+          private:true
+        }
+      }
+    );
+
+
+  parentCameraChannel
+
+    .on(
+      "broadcast",
+      {
+        event:"camera-offer"
+      },
+      ({payload}) => {
+
+        handleChildCameraOffer(
+          payload
+        );
+
+      }
+    )
+
+    .on(
+      "broadcast",
+      {
+        event:"camera-ice"
+      },
+      ({payload}) => {
+
+        handleChildCameraIce(
+          payload
+        );
+
+      }
+    )
+
+    .on(
+      "broadcast",
+      {
+        event:"camera-state"
+      },
+      ({payload}) => {
+
+        handleChildCameraState(
+          payload
+        );
+
+      }
+    );
+
+
+  parentCameraChannel.subscribe(
+    async status => {
+
+      if(status === "SUBSCRIBED"){
+
+        console.log(
+          "SafeGuard parent camera channel connected."
+        );
+
+        /* Automatically ask whether
+           child camera is currently active. */
+
+        await requestChildCamera();
+
+      }
+
+    }
+  );
+
+}
 
 /* =========================================================
    CARD NAVIGATION
@@ -3152,6 +4462,11 @@ async function manualRefresh(){
 
 }
 
+$("requestCameraBtn")
+  .addEventListener(
+    "click",
+    requestChildCamera
+  );
 
 /* =========================================================
    LOGOUT
