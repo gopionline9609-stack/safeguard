@@ -1154,6 +1154,7 @@ body:before{
   font-size:14px;
 }
 
+.map-open-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:10px 13px;border-radius:12px;color:#dff8ff;text-decoration:none;font-size:12px;font-weight:850;border:1px solid rgba(53,230,255,.22);background:linear-gradient(135deg,rgba(53,230,255,.10),rgba(79,140,255,.10));box-shadow:0 10px 30px rgba(0,0,0,.18);transition:.22s ease}.map-open-link:hover{transform:translateY(-2px);border-color:rgba(53,230,255,.42);background:linear-gradient(135deg,rgba(53,230,255,.16),rgba(79,140,255,.16));}
 .map-box span{
   display:block;
 
@@ -2516,6 +2517,7 @@ body:before{
       <span id="mapDescription">
         No location has been shared yet.
       </span>
+      <a id="openMapLink" class="map-open-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Open in Google Maps ↗</a>
 
     </div>
 
@@ -2633,6 +2635,7 @@ let parentUser = null;
 let connectedChildren = [];
 let activeEmergencyAlert = null;
 let cameraRequestedForAlertId = null;
+let safetyAlertChannel = null;
 
 const $ = id => document.getElementById(id);
 
@@ -2705,37 +2708,25 @@ function setEmergencyVisual(active){
 }
 
 function renderLocation(alert){
-  const hasCoords = Number.isFinite(Number(alert?.latitude)) &&
-                    Number.isFinite(Number(alert?.longitude));
-  const address = alert?.address && alert.address !== "Location unavailable"
-    ? alert.address
-    : null;
-
-  const locationStatus = $("locationStatus");
-  const locationDot = $("locationDot");
-  const locationValue = $("locationValue");
-  const mapTitle = $("mapTitle");
-  const mapDescription = $("mapDescription");
-
+  const lat=Number(alert?.latitude), lon=Number(alert?.longitude), hasCoords=Number.isFinite(lat)&&Number.isFinite(lon);
+  const address=alert?.address&&alert.address!=="Location unavailable"?String(alert.address):null;
+  const locationStatus=$("locationStatus"), locationDot=$("locationDot"), locationValue=$("locationValue"), mapTitle=$("mapTitle"), mapDescription=$("mapDescription"), openMapLink=$("openMapLink");
   if(hasCoords){
-    const coords = `${Number(alert.latitude).toFixed(6)}, ${Number(alert.longitude).toFixed(6)}`;
-    if(locationStatus) locationStatus.textContent = address ? "Live emergency location shared" : `GPS: ${coords}`;
-    if(locationDot){
-      locationDot.style.background = "#4df0a7";
-      locationDot.style.boxShadow = "0 0 12px rgba(77,240,167,.75)";
-    }
-    if(locationValue) locationValue.textContent = address || coords;
-    if(mapTitle) mapTitle.textContent = address || coords;
-    if(mapDescription) mapDescription.textContent = `GPS coordinates: ${coords}`;
+    const coords=`${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    const mapsUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lon}`)}`;
+    if(locationStatus)locationStatus.textContent=address?"Live emergency location shared":`GPS: ${coords}`;
+    if(locationDot){locationDot.style.background="#4df0a7";locationDot.style.boxShadow="0 0 12px rgba(77,240,167,.75)";}
+    if(locationValue)locationValue.textContent=address||coords;
+    if(mapTitle)mapTitle.textContent=address||coords;
+    if(mapDescription)mapDescription.textContent=`GPS coordinates: ${coords}`;
+    if(openMapLink){openMapLink.href=mapsUrl;openMapLink.hidden=false;}
   }else{
-    if(locationStatus) locationStatus.textContent = "Waiting for shared location";
-    if(locationDot){
-      locationDot.style.background = "#718099";
-      locationDot.style.boxShadow = "none";
-    }
-    if(locationValue) locationValue.textContent = "Not shared";
-    if(mapTitle) mapTitle.textContent = "Location not available";
-    if(mapDescription) mapDescription.textContent = "No location has been shared yet.";
+    if(locationStatus)locationStatus.textContent="Waiting for shared location";
+    if(locationDot){locationDot.style.background="#718099";locationDot.style.boxShadow="none";}
+    if(locationValue)locationValue.textContent="Not shared";
+    if(mapTitle)mapTitle.textContent="Location not available";
+    if(mapDescription)mapDescription.textContent="No location has been shared yet.";
+    if(openMapLink){openMapLink.hidden=true;openMapLink.removeAttribute("href");}
   }
 }
 
@@ -4338,6 +4329,18 @@ activateCard(
 /* =========================================================
    DASHBOARD REFRESH
 ========================================================= */
+
+async function setupSafetyAlertRealtime(){
+  if(!window.supabaseClient||!parentUser||safetyAlertChannel)return;
+  safetyAlertChannel=window.supabaseClient.channel(`safeguard-parent-alerts:${parentUser.id}`)
+    .on("postgres_changes",{event:"*",schema:"public",table:"safety_alerts"},async payload=>{
+      const row=payload?.new||payload?.old;
+      if(!row?.child_user_id)return;
+      if(!connectedChildren.some(child=>child.user_id===row.child_user_id))return;
+      if(payload.eventType==="DELETE"||row.alert_type==="SOS")await loadLatestSOS();
+    })
+    .subscribe(status=>console.log("SafeGuard parent alert realtime:",status));
+}
 
 async function refreshDashboard(user){
 
