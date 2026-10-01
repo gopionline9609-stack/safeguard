@@ -2217,7 +2217,35 @@ body:before{
     </p>
 
   </article>
+<article class="card section">
+  <div class="section-head">
+    <div>
+      <h2 class="section-title">Emergency Camera</h2>
+      <div class="section-sub">
+        Live video from the child's device during an active SOS.
+      </div>
+    </div>
 
+    <div class="iconbox">🚨</div>
+  </div>
+
+  <div class="camera">
+    <div class="cam-label" id="parentCameraLabel">
+      WAITING FOR SOS CAMERA
+    </div>
+
+    <video
+      id="parentCameraVideo"
+      autoplay
+      playsinline
+      muted>
+    </video>
+
+    <div class="camera-overlay"></div>
+  </div>
+
+  <div id="parentCameraNotice" class="notice"></div>
+</article>
 
   <article
     class="status-card status-card-clickable emergency-status-card"
@@ -2600,817 +2628,34 @@ body:before{
 "use strict";
 
 /* =========================================================
-   CHILD LIVE CAMERA — WEBRTC
+   SAFEGUARD PARENT LIVE CAMERA — ROBUST WEBRTC
 ========================================================= */
 
 let parentCameraChannel = null;
 let parentCameraPeer = null;
+
 let parentCameraChildId = null;
+let parentCameraUserId = null;
 let parentCameraSessionId = null;
+
 let parentCameraIceQueue = [];
-let parentCameraLastLiveAt = null;
+let parentCameraRemoteDescriptionSet = false;
 
 const PARENT_CAMERA_RTC_CONFIG = {
-  iceServers:[
+  iceServers: [
     {
-      urls:"stun:stun.l.google.com:19302"
+      urls: "stun:stun.l.google.com:19302"
+    },
+    {
+      urls: "stun:stun1.l.google.com:19302"
     }
-  ]
+  ],
+  iceCandidatePoolSize: 10
 };
 
-/* =========================================================
-   SAFEGUARD PARENT COMMAND CENTER
-========================================================= */
-
-function $(id){
-  return document.getElementById(id);
-}
-
-
 
 /* =========================================================
-   TOAST
-========================================================= */
-
-let toastTimer;
-
-function toast(message){
-
-  const el = $("toast");
-
-  if(!el) return;
-
-  el.textContent = message;
-
-  el.classList.add("show");
-
-  clearTimeout(toastTimer);
-
-  toastTimer =
-    setTimeout(() => {
-      el.classList.remove("show");
-    },3200);
-
-}
-
-
-/* =========================================================
-   CURRENT USER
-========================================================= */
-
-async function getCurrentUser(){
-
-  if(typeof window.supabaseClient === "undefined"){
-
-    console.error(
-      "SafeGuard: Supabase client unavailable."
-    );
-
-    return null;
-  }
-
-
-  const {data,error} =
-    await window.supabaseClient
-      .auth
-      .getUser();
-
-
-  if(error || !data.user){
-
-    console.error(
-      "SafeGuard auth error:",
-      error
-    );
-
-    return null;
-  }
-
-
-  return data.user;
-
-}
-
-
-/* =========================================================
-   PARENT ACCESS
-========================================================= */
-
-async function checkParentAccess(){
-
-  const user =
-    await getCurrentUser();
-
-
-  if(!user){
-
-    window.location.replace(
-      "index.html"
-    );
-
-    return null;
-  }
-
-
-  const role =
-    localStorage.getItem(
-      "safeguard_role"
-    );
-
-
-  if(role !== "parent"){
-
-    window.location.replace(
-      "dashboard.html?role=child"
-    );
-
-    return null;
-  }
-
-
-  return user;
-
-}
-
-
-/* =========================================================
-   ACCOUNT
-========================================================= */
-
-function renderParentAccount(user){
-
-  $("parentEmail").textContent =
-    user.email ||
-    "Guardian account";
-
-}
-
-
-/* =========================================================
-   CONNECTED CHILDREN
-========================================================= */
-
-let connectedChildren = [];
-
-
-async function loadConnectedChildren(user){
-
-  const email =
-    (user.email || "").trim().toLowerCase();
-
-
-  const {data,error} =
-    await window.supabaseClient
-
-      .from("trusted_contacts")
-
-      .select(
-        "user_id,child_email,parent_email,relationship,verified,created_at"
-      )
-
-      .eq(
-        "parent_email",
-        email
-      )
-
-      .eq(
-        "relationship",
-        "parent"
-      )
-
-      .order(
-        "created_at",
-        {
-          ascending:false
-        }
-      );
-
-
-  if(error){
-
-    console.error(
-      "SafeGuard child connection error:",
-      error
-    );
-
-
-    connectedChildren = [];
-
-
-    $("childAccountStatus").textContent =
-      "Connection data unavailable";
-
-
-    $("childEmail").textContent =
-      "Unable to load connected child";
-
-
-    $("accountValue").textContent =
-      "Connection check required";
-
-
-    $("connectionBadge").textContent =
-      "● CONNECTION CHECK";
-
-
-    return [];
-
-  }
-
-
-  connectedChildren =
-    data || [];
-
-
-  if(!connectedChildren.length){
-
-    $("childAccountStatus").textContent =
-      "No child connected";
-
-
-    $("childEmail").textContent =
-      "No child connected yet";
-
-
-    $("accountValue").textContent =
-      "Waiting for child connection";
-
-
-    $("connectionBadge").textContent =
-      "● WAITING";
-
-
-    $("connectionBadge").style.color =
-      "#ffc857";
-
-
-    $("childDot").style.background =
-      "#718099";
-
-
-    $("childDot").style.boxShadow =
-      "none";
-
-
-    return [];
-
-  }
-
-
-  const child =
-    connectedChildren[0];
-
-    await setupParentCameraChannel(
-  child.user_id
-);
-
-  $("childAccountStatus").textContent =
-    "Connected child account";
-
-
-  $("childEmail").textContent =
-    child.child_email ||
-    "Connected child account";
-
-
-  $("accountValue").textContent =
-    child.verified
-      ? "Verified connection"
-      : "Connected · Pending verification";
-
-
-  $("connectionBadge").textContent =
-    child.verified
-      ? "● VERIFIED"
-      : "● CONNECTED";
-
-
-  $("connectionBadge").style.color =
-    child.verified
-      ? "#63efb7"
-      : "#ffc857";
-
-
-  $("childDot").style.background =
-    "#3be6a2";
-
-
-  $("childDot").style.boxShadow =
-    "0 0 14px rgba(59,230,162,.8)";
-
-
-  return connectedChildren;
-
-}
-
-
-/* =========================================================
-   RESET LOCATION
-========================================================= */
-
-function resetLocationUI(){
-
-  $("locationDot").style.background =
-    "#718099";
-
-
-  $("locationDot").style.boxShadow =
-    "none";
-
-
-  $("locationStatus").textContent =
-    "Waiting for shared location";
-
-
-  $("locationValue").textContent =
-    "Not shared";
-
-
-  $("mapTitle").textContent =
-    "Location not available";
-
-
-  $("mapDescription").textContent =
-    "No location has been shared yet.";
-
-
-  $("mapIcon").textContent =
-    "📍";
-
-}
-
-
-/* =========================================================
-   RESET EMERGENCY
-========================================================= */
-
-function resetEmergencyUI(){
-
-  $("alertCard")
-    .classList
-    .remove("emergency-active");
-
-
-  $("emergencyStatusCard")
-    .classList
-    .remove("is-active");
-
-
-  $("alertBadge")
-    .classList
-    .remove("active");
-
-
-  $("alertBadge").textContent =
-    "MONITORING";
-
-
-  $("sosDot").style.background =
-    "#718099";
-
-
-  $("sosDot").style.boxShadow =
-    "none";
-
-
-  $("emergencyStatus").textContent =
-    "No active emergency";
-
-
-  $("alertBox").innerHTML =
-    "No active emergency alerts.";
-
-
-  resetLocationUI();
-
-}
-
-
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
-
-function escapeHtml(value){
-
-  return String(value ?? "")
-
-    .replace(/&/g,"&amp;")
-
-    .replace(/</g,"&lt;")
-
-    .replace(/>/g,"&gt;")
-
-    .replace(/"/g,"&quot;")
-
-    .replace(/'/g,"&#039;");
-
-}
-
-
-/* =========================================================
-   RENDER SOS
-========================================================= */
-
-function renderSOSAlert(alert){
-
-  if(!alert){
-
-    resetEmergencyUI();
-
-    return;
-  }
-
-
-  $("alertCard")
-    .classList
-    .add("emergency-active");
-
-
-  $("emergencyStatusCard")
-    .classList
-    .add("is-active");
-
-
-  $("alertBadge")
-    .classList
-    .add("active");
-
-
-  $("alertBadge").textContent =
-    "● ACTIVE SOS";
-
-
-  $("sosDot").style.background =
-    "#ff476b";
-
-
-  $("sosDot").style.boxShadow =
-    "0 0 18px rgba(255,71,107,.95)";
-
-
-  $("emergencyStatus").textContent =
-    "ACTIVE SOS ALERT";
-
-
-  const created =
-    alert.created_at
-
-      ? new Date(
-          alert.created_at
-        ).toLocaleString()
-
-      : "Just now";
-
-
-  const childEmail =
-    alert.child_email ||
-    "Connected child";
-
-
-  const latitude =
-    typeof alert.latitude === "number"
-
-      ? alert.latitude.toFixed(6)
-
-      : "Unavailable";
-
-
-  const longitude =
-    typeof alert.longitude === "number"
-
-      ? alert.longitude.toFixed(6)
-
-      : "Unavailable";
-
-
-  const hasCoordinates =
-    typeof alert.latitude === "number" &&
-    typeof alert.longitude === "number";
-
-
-  const mapLink =
-    hasCoordinates
-
-      ? `https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`
-
-      : null;
-
-
-  $("alertBox").innerHTML = `
-
-    <div class="live-alert">
-
-      <div class="alert-top-row">
-
-        <div class="alert-title">
-
-          <span class="alert-pulse"></span>
-
-          <strong>
-            EMERGENCY — SOS ACTIVE
-          </strong>
-
-        </div>
-
-        <span class="alert-time">
-          ${escapeHtml(created)}
-        </span>
-
-      </div>
-
-
-      <div class="alert-grid">
-
-        <div class="alert-info">
-
-          <small>
-            CHILD ACCOUNT
-          </small>
-
-          <strong>
-            ${escapeHtml(childEmail)}
-          </strong>
-
-        </div>
-
-
-        <div class="alert-info">
-
-          <small>
-            ALERT TYPE
-          </small>
-
-          <strong>
-            ${escapeHtml(
-              alert.alert_type || "SOS"
-            )}
-          </strong>
-
-        </div>
-
-
-        <div class="alert-info">
-
-          <small>
-            STATUS
-          </small>
-
-          <strong style="color:#ff718d">
-
-            ${escapeHtml(
-              alert.status || "active"
-            ).toUpperCase()}
-
-          </strong>
-
-        </div>
-
-      </div>
-
-
-      <div class="alert-location">
-
-        <strong>
-          📍 Emergency Location
-        </strong>
-
-        <br>
-
-        ${escapeHtml(
-          alert.address ||
-          `${latitude}, ${longitude}`
-        )}
-
-        <br>
-
-        <span style="color:#8392a9">
-
-          Coordinates:
-          ${latitude},
-          ${longitude}
-
-        </span>
-
-        ${
-          mapLink
-
-            ? `
-
-              <br><br>
-
-              <a
-                href="${mapLink}"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open emergency location ↗
-              </a>
-
-            `
-
-            : ""
-
-        }
-
-      </div>
-
-    </div>
-
-  `;
-
-
-  /* =======================================================
-     LOCATION UI
-  ======================================================= */
-
-  if(hasCoordinates){
-
-    $("locationDot").style.background =
-      "#3be6a2";
-
-
-    $("locationDot").style.boxShadow =
-      "0 0 14px rgba(59,230,162,.8)";
-
-
-    $("locationStatus").textContent =
-      "Emergency location available";
-
-
-    $("locationValue").textContent =
-      `${latitude}, ${longitude}`;
-
-
-    $("mapTitle").textContent =
-      "Emergency location available";
-
-
-    $("mapDescription").textContent =
-      `${latitude}, ${longitude}`;
-
-
-    $("mapIcon").textContent =
-      "🚨";
-
-  }else{
-
-    $("locationDot").style.background =
-      "#ffc857";
-
-
-    $("locationDot").style.boxShadow =
-      "0 0 14px rgba(255,200,87,.7)";
-
-
-    $("locationStatus").textContent =
-      "SOS active · location unavailable";
-
-
-    $("locationValue").textContent =
-      "Unavailable";
-
-
-    $("mapTitle").textContent =
-      "SOS active";
-
-
-    $("mapDescription").textContent =
-      "Emergency alert received without GPS coordinates.";
-
-
-    $("mapIcon").textContent =
-      "🚨";
-
-  }
-
-
-  $("lastUpdate").textContent =
-    created;
-
-}
-
-
-/* =========================================================
-   LOAD ACTIVE SOS
-========================================================= */
-
-async function loadLatestSOS(){
-
-
-
-  if(!connectedChildren.length){
-
-    resetEmergencyUI();
-
-    return;
-
-  }
-
-
-  const childIds =
-    connectedChildren
-
-      .map(
-        child => child.user_id
-      )
-
-      .filter(Boolean);
-
-
-  if(!childIds.length){
-
-    resetEmergencyUI();
-
-    return;
-
-  }
-
-
-  const {data,error} =
-    await window.supabaseClient
-
-      .from("safety_alerts")
-
-      .select(`
-        id,
-        child_user_id,
-        child_email,
-        alert_type,
-        latitude,
-        longitude,
-        address,
-        status,
-        created_at,
-        resolved_at
-      `)
-
-      .in(
-        "child_user_id",
-        childIds
-      )
-
-      .eq(
-        "status",
-        "active"
-      )
-
-      .order(
-        "created_at",
-        {
-          ascending:false
-        }
-      )
-
-      .limit(1);
-
-
-  if(error){
-
-    console.error(
-      "SafeGuard SOS load error:",
-      error
-    );
-
-
-    $("alertBox").innerHTML = `
-
-      <div style="
-        padding:18px;
-        border-radius:14px;
-        background:rgba(255,77,107,.06);
-        border:1px solid rgba(255,77,107,.12);
-        color:#ffb5c2;
-      ">
-
-        Emergency monitoring temporarily unavailable.
-
-        <br><br>
-
-        <small style="color:#8796af">
-          ${escapeHtml(error.message)}
-        </small>
-
-      </div>
-
-    `;
-
-    return;
-
-  }
-
-
-  const alert =
-    data && data.length
-      ? data[0]
-      : null;
-
-
-  renderSOSAlert(alert);
-
-}
-
-/* =========================================================
-   PARENT LIVE CAMERA UI
+   CAMERA STATUS UI
 ========================================================= */
 
 function setParentCameraStatus(
@@ -3419,27 +2664,14 @@ function setParentCameraStatus(
   description
 ){
 
-  const card =
-    $("liveCameraSection");
+  const card = $("liveCameraSection");
+  const badge = $("parentCameraBadge");
 
-  const badge =
-    $("parentCameraBadge");
+  const titleEl = $("parentCameraTitle");
+  const descEl = $("parentCameraDescription");
 
-  const empty =
-    $("parentCameraEmpty");
-
-  const titleEl =
-    $("parentCameraTitle");
-
-  const descEl =
-    $("parentCameraDescription");
-
-  const connection =
-    $("parentCameraConnection");
-
-  const quality =
-    $("parentCameraQuality");
-
+  const connection = $("parentCameraConnection");
+  const quality = $("parentCameraQuality");
 
   if(!card) return;
 
@@ -3457,7 +2689,9 @@ function setParentCameraStatus(
   if(state === "live"){
 
     badge.classList.add("live");
-    badge.textContent = "● LIVE";
+
+    badge.textContent =
+      "● LIVE";
 
     connection.textContent =
       "Live camera connected";
@@ -3465,22 +2699,20 @@ function setParentCameraStatus(
     quality.textContent =
       "Secure WebRTC stream";
 
-
-    parentCameraLastLiveAt =
-      new Date();
-
-
     $("parentCameraTime").textContent =
-      parentCameraLastLiveAt
-        .toLocaleTimeString();
+      new Date().toLocaleTimeString();
 
   }
 
 
   else if(state === "connecting"){
 
-    badge.classList.add("connecting");
-    badge.textContent = "CONNECTING";
+    badge.classList.add(
+      "connecting"
+    );
+
+    badge.textContent =
+      "CONNECTING";
 
     connection.textContent =
       "Establishing secure connection";
@@ -3493,8 +2725,12 @@ function setParentCameraStatus(
 
   else if(state === "error"){
 
-    badge.classList.add("error");
-    badge.textContent = "ERROR";
+    badge.classList.add(
+      "error"
+    );
+
+    badge.textContent =
+      "ERROR";
 
     connection.textContent =
       "Camera connection failed";
@@ -3522,30 +2758,34 @@ function setParentCameraStatus(
   titleEl.textContent =
     title;
 
-
   descEl.textContent =
     description;
 
 }
 
 
+/* =========================================================
+   CLEAR VIDEO
+========================================================= */
+
 function clearParentCameraVideo(){
 
   const video =
     $("parentCameraVideo");
 
-  if(video){
+  if(!video) return;
 
+  try{
     video.pause();
-    video.srcObject = null;
+  }catch(e){}
 
-  }
+  video.srcObject = null;
 
 }
 
 
 /* =========================================================
-   CLOSE PARENT PEER
+   CLOSE PEER
 ========================================================= */
 
 function closeParentCameraPeer(){
@@ -3557,12 +2797,16 @@ function closeParentCameraPeer(){
       parentCameraPeer.ontrack = null;
       parentCameraPeer.onicecandidate = null;
       parentCameraPeer.onconnectionstatechange = null;
+      parentCameraPeer.oniceconnectionstatechange = null;
 
       parentCameraPeer.close();
 
     }catch(error){
 
-      console.warn(error);
+      console.warn(
+        "SafeGuard peer close:",
+        error
+      );
 
     }
 
@@ -3570,7 +2814,10 @@ function closeParentCameraPeer(){
 
 
   parentCameraPeer = null;
-  parentCameraSessionId = null;
+
+  parentCameraRemoteDescriptionSet =
+    false;
+
   parentCameraIceQueue = [];
 
   clearParentCameraVideo();
@@ -3579,7 +2826,7 @@ function closeParentCameraPeer(){
 
 
 /* =========================================================
-   SEND PARENT CAMERA SIGNAL
+   SEND SIGNAL
 ========================================================= */
 
 async function sendParentCameraSignal(
@@ -3587,30 +2834,57 @@ async function sendParentCameraSignal(
   payload = {}
 ){
 
-  if(!parentCameraChannel) return;
+  if(!parentCameraChannel){
+
+    console.warn(
+      "Camera channel unavailable"
+    );
+
+    return false;
+
+  }
+
 
   try{
 
     await parentCameraChannel.send({
 
-      type:"broadcast",
+      type: "broadcast",
 
       event,
 
-      payload:{
+      payload: {
+
         ...payload,
+
         parentId:
-        null
+          parentCameraUserId,
+
+        childId:
+          parentCameraChildId
+
       }
 
     });
 
+
+    console.log(
+      "Camera signal sent:",
+      event,
+      payload
+    );
+
+
+    return true;
+
   }catch(error){
 
     console.error(
-      "SafeGuard parent camera signal:",
+      "Camera signal send error:",
       error
     );
+
+    return false;
 
   }
 
@@ -3626,139 +2900,278 @@ function createParentCameraPeer(){
   closeParentCameraPeer();
 
 
-  parentCameraPeer =
+  const pc =
     new RTCPeerConnection(
       PARENT_CAMERA_RTC_CONFIG
     );
 
 
-  parentCameraPeer.ontrack =
-    event => {
-
-      const video =
-        $("parentCameraVideo");
-
-      if(!video) return;
+  parentCameraPeer = pc;
 
 
-      if(
-        event.streams &&
-        event.streams[0]
-      ){
+  /* -----------------------------------------
+     REMOTE VIDEO
+  ----------------------------------------- */
 
-        video.srcObject =
-          event.streams[0];
+  pc.ontrack = event => {
 
-      }else{
+    console.log(
+      "Parent received remote track"
+    );
 
-        const stream =
-          new MediaStream();
 
-        stream.addTrack(
-          event.track
+    const video =
+      $("parentCameraVideo");
+
+    if(!video) return;
+
+
+    let stream =
+      event.streams &&
+      event.streams[0];
+
+
+    if(!stream){
+
+      stream =
+        new MediaStream();
+
+      stream.addTrack(
+        event.track
+      );
+
+    }
+
+
+    video.srcObject =
+      stream;
+
+
+    video.muted = true;
+
+    video.autoplay = true;
+
+    video.playsInline = true;
+
+
+    video.play().catch(
+      error => {
+
+        console.warn(
+          "Video autoplay:",
+          error
         );
 
-        video.srcObject =
-          stream;
+      }
+    );
+
+
+    setParentCameraStatus(
+
+      "live",
+
+      "Live camera connected",
+
+      "The connected child's camera is currently streaming."
+
+    );
+
+  };
+
+
+  /* -----------------------------------------
+     LOCAL ICE
+  ----------------------------------------- */
+
+  pc.onicecandidate = event => {
+
+    if(!event.candidate)
+      return;
+
+
+    console.log(
+      "Parent ICE candidate"
+    );
+
+
+    sendParentCameraSignal(
+      "camera-ice",
+      {
+
+        sessionId:
+          parentCameraSessionId,
+
+        candidate:
+          event.candidate.toJSON()
 
       }
+    );
+
+  };
 
 
-      video.play().catch(() => {});
+  /* -----------------------------------------
+     CONNECTION STATE
+  ----------------------------------------- */
 
+  pc.onconnectionstatechange = () => {
+
+    const state =
+      pc.connectionState;
+
+
+    console.log(
+      "Parent WebRTC state:",
+      state
+    );
+
+
+    if(state === "connected"){
 
       setParentCameraStatus(
+
         "live",
+
         "Live camera connected",
-        "The connected child's camera is currently streaming."
+
+        "Secure WebRTC camera stream is active."
+
       );
 
-    };
+    }
 
 
-  parentCameraPeer.onicecandidate =
-    event => {
+    else if(
+      state === "connecting"
+    ){
 
-      if(!event.candidate) return;
+      setParentCameraStatus(
 
+        "connecting",
 
-      sendParentCameraSignal(
-        "camera-ice",
-        {
-          sessionId:
-            parentCameraSessionId,
+        "Connecting to child camera",
 
-          candidate:
-            event.candidate.toJSON()
-        }
+        "Establishing the secure camera connection…"
+
       );
 
-    };
+    }
 
 
-  parentCameraPeer.onconnectionstatechange =
-    () => {
+    else if(
+      state === "disconnected"
+    ){
 
-      const state =
-        parentCameraPeer?.connectionState;
+      setParentCameraStatus(
 
+        "connecting",
 
-      if(state === "connected"){
+        "Camera reconnecting",
 
-        setParentCameraStatus(
-          "live",
-          "Live camera connected",
-          "Secure WebRTC camera stream is active."
-        );
+        "Trying to restore the live camera connection…"
 
-      }
+      );
 
-
-      if(
-        state === "failed" ||
-        state === "closed"
-      ){
-
-        setParentCameraStatus(
-          "error",
-          "Camera connection lost",
-          "The child camera stream is no longer available."
-        );
-
-      }
+    }
 
 
-      if(state === "disconnected"){
+    else if(
+      state === "failed"
+    ){
 
-        setParentCameraStatus(
-          "connecting",
-          "Camera reconnecting",
-          "Trying to restore the live camera connection…"
-        );
+      setParentCameraStatus(
 
-      }
+        "error",
 
-    };
+        "Camera connection failed",
+
+        "WebRTC could not establish the camera connection."
+
+      );
+
+    }
 
 
-  return parentCameraPeer;
+    else if(
+      state === "closed"
+    ){
+
+      setParentCameraStatus(
+
+        "offline",
+
+        "Camera offline",
+
+        "The live camera connection has been closed."
+
+      );
+
+    }
+
+  };
+
+
+  /* -----------------------------------------
+     ICE CONNECTION STATE
+  ----------------------------------------- */
+
+  pc.oniceconnectionstatechange = () => {
+
+    console.log(
+      "Parent ICE state:",
+      pc.iceConnectionState
+    );
+
+
+    if(
+      pc.iceConnectionState ===
+      "failed"
+    ){
+
+      setParentCameraStatus(
+
+        "error",
+
+        "Network connection failed",
+
+        "The camera could not establish a WebRTC network path."
+
+      );
+
+    }
+
+  };
+
+
+  return pc;
 
 }
 
 
 /* =========================================================
-   HANDLE CHILD OFFER
+   CHILD OFFER
 ========================================================= */
 
-async function handleChildCameraOffer(payload){
+async function handleChildCameraOffer(
+  payload
+){
 
-  if(
-    !payload?.sdp ||
-    !payload?.sessionId
-  ){
+  console.log(
+    "Child camera offer received:",
+    payload
+  );
 
+
+  if(!payload)
     return;
-  }
+
+
+  if(!payload.sdp)
+    return;
+
+
+  if(!payload.sessionId)
+    return;
 
 
   if(
@@ -3766,7 +3179,12 @@ async function handleChildCameraOffer(payload){
     parentCameraSessionId
   ){
 
+    console.warn(
+      "Ignoring offer from old session"
+    );
+
     return;
+
   }
 
 
@@ -3777,14 +3195,28 @@ async function handleChildCameraOffer(payload){
       createParentCameraPeer();
 
 
+    /*
+      IMPORTANT:
+      Set remote description BEFORE
+      adding queued ICE candidates.
+    */
+
     await pc.setRemoteDescription(
+
       new RTCSessionDescription(
         payload.sdp
       )
+
     );
 
 
-    /* Add ICE received before SDP */
+    parentCameraRemoteDescriptionSet =
+      true;
+
+
+    /* -----------------------------------------
+       ADD QUEUED CHILD ICE
+    ----------------------------------------- */
 
     for(
       const candidate
@@ -3794,13 +3226,17 @@ async function handleChildCameraOffer(payload){
       try{
 
         await pc.addIceCandidate(
-          new RTCIceCandidate(candidate)
+
+          new RTCIceCandidate(
+            candidate
+          )
+
         );
 
       }catch(error){
 
         console.warn(
-          "SafeGuard queued child ICE:",
+          "Queued ICE error:",
           error
         );
 
@@ -3812,6 +3248,10 @@ async function handleChildCameraOffer(payload){
     parentCameraIceQueue = [];
 
 
+    /* -----------------------------------------
+       CREATE ANSWER
+    ----------------------------------------- */
+
     const answer =
       await pc.createAnswer();
 
@@ -3821,37 +3261,55 @@ async function handleChildCameraOffer(payload){
     );
 
 
+    console.log(
+      "Sending camera answer"
+    );
+
+
     await sendParentCameraSignal(
+
       "camera-answer",
+
       {
+
         sessionId:
           parentCameraSessionId,
 
         sdp:
           pc.localDescription
+
       }
+
     );
 
 
     setParentCameraStatus(
-      "connecting",
-      "Connecting to child camera",
-      "Camera offer received. Establishing secure video connection…"
-    );
 
+      "connecting",
+
+      "Connecting to child camera",
+
+      "Camera offer received. Completing secure WebRTC connection…"
+
+    );
 
   }catch(error){
 
     console.error(
-      "SafeGuard parent camera offer:",
+      "Parent camera offer error:",
       error
     );
 
 
     setParentCameraStatus(
+
       "error",
+
       "Camera connection failed",
-      "The WebRTC camera session could not be established."
+
+      error.message ||
+      "Unable to complete WebRTC negotiation."
+
     );
 
   }
@@ -3860,12 +3318,19 @@ async function handleChildCameraOffer(payload){
 
 
 /* =========================================================
-   HANDLE CHILD ICE
+   CHILD ICE
 ========================================================= */
 
-async function handleChildCameraIce(payload){
+async function handleChildCameraIce(
+  payload
+){
 
-  if(!payload?.candidate) return;
+  if(!payload)
+    return;
+
+
+  if(!payload.candidate)
+    return;
 
 
   if(
@@ -3874,34 +3339,47 @@ async function handleChildCameraIce(payload){
   ){
 
     return;
+
   }
 
 
+  /*
+    If remote SDP has not arrived yet,
+    keep the ICE candidate in memory.
+  */
+
   if(
     !parentCameraPeer ||
-    !parentCameraPeer.remoteDescription
+    !parentCameraRemoteDescriptionSet
   ){
 
     parentCameraIceQueue.push(
       payload.candidate
     );
 
+    console.log(
+      "Queued child ICE candidate"
+    );
+
     return;
+
   }
 
 
   try{
 
     await parentCameraPeer.addIceCandidate(
+
       new RTCIceCandidate(
         payload.candidate
       )
+
     );
 
   }catch(error){
 
     console.warn(
-      "SafeGuard child ICE error:",
+      "Child ICE error:",
       error
     );
 
@@ -3911,56 +3389,108 @@ async function handleChildCameraIce(payload){
 
 
 /* =========================================================
-   HANDLE CHILD CAMERA STATE
+   CHILD CAMERA STATE
 ========================================================= */
 
-function handleChildCameraState(payload){
+function handleChildCameraState(
+  payload
+){
 
-  if(!payload) return;
+  if(!payload)
+    return;
 
 
-  if(payload.state === "ready"){
+  console.log(
+    "Child camera state:",
+    payload
+  );
+
+
+  if(payload.sessionId){
+
+    if(
+      parentCameraSessionId &&
+      payload.sessionId !==
+      parentCameraSessionId
+    ){
+
+      return;
+
+    }
+
+  }
+
+
+  if(
+    payload.state ===
+    "ready"
+  ){
 
     setParentCameraStatus(
+
       "connecting",
+
       "Child camera ready",
-      "The child's camera is enabled. Establishing secure live view…"
+
+      "The child's camera is enabled. Connecting securely…"
+
     );
 
   }
 
 
-  if(payload.state === "live"){
+  else if(
+    payload.state ===
+    "live"
+  ){
 
     setParentCameraStatus(
+
       "connecting",
+
       "Connecting to child camera",
+
       "Live camera negotiation is in progress…"
+
     );
 
   }
 
 
-  if(payload.state === "offline"){
+  else if(
+    payload.state ===
+    "offline"
+  ){
 
     closeParentCameraPeer();
 
 
     setParentCameraStatus(
+
       "offline",
+
       "Camera offline",
+
       "Ask the child to enable Camera on their device."
+
     );
 
   }
 
 
-  if(payload.state === "error"){
+  else if(
+    payload.state ===
+    "error"
+  ){
 
     setParentCameraStatus(
+
       "error",
+
       "Camera unavailable",
+
       "The child camera could not be connected."
+
     );
 
   }
@@ -4013,38 +3543,59 @@ async function requestChildCamera(){
   closeParentCameraPeer();
 
 
+  /*
+    Create a NEW session every time.
+  */
+
   parentCameraSessionId =
     crypto.randomUUID();
+
+
+  console.log(
+    "New camera session:",
+    parentCameraSessionId
+  );
 
 
   createParentCameraPeer();
 
 
   setParentCameraStatus(
+
     "connecting",
+
     "Requesting live camera",
+
     "Waiting for the child device to provide its active camera stream…"
+
   );
 
 
-  try{
-
+  const sent =
     await sendParentCameraSignal(
+
       "camera-request",
+
       {
+
         sessionId:
           parentCameraSessionId
+
       }
+
     );
 
-  }catch(error){
 
-    console.error(error);
+  if(!sent){
 
     setParentCameraStatus(
+
       "error",
+
       "Camera request failed",
-      "Could not contact the child camera."
+
+      "The parent could not contact the child camera."
+
     );
 
   }
@@ -4066,6 +3617,316 @@ async function requestChildCamera(){
 }
 
 
+/* =========================================================
+   SETUP PARENT CAMERA CHANNEL
+========================================================= */
+
+async function setupParentCameraChannel(
+  childId
+){
+
+  if(!childId)
+    return;
+
+
+  /*
+    Get actual parent user ID.
+  */
+
+  const user =
+    await getCurrentUser();
+
+
+  if(!user){
+
+    console.error(
+      "Parent user unavailable."
+    );
+
+    return;
+
+  }
+
+
+  parentCameraUserId =
+    user.id;
+
+
+  /*
+    If already connected to same child,
+    don't create another channel.
+  */
+
+  if(
+    parentCameraChildId ===
+    childId &&
+    parentCameraChannel
+  ){
+
+    return;
+
+  }
+
+
+  /*
+    Remove old channel.
+  */
+
+  if(parentCameraChannel){
+
+    try{
+
+      await window.supabaseClient
+        .removeChannel(
+          parentCameraChannel
+        );
+
+    }catch(error){
+
+      console.warn(
+        "Old camera channel removal:",
+        error
+      );
+
+    }
+
+  }
+
+
+  closeParentCameraPeer();
+
+
+  parentCameraChildId =
+    childId;
+
+
+  parentCameraSessionId =
+    null;
+
+
+  const topic =
+    `safeguard-camera:${childId}`;
+
+
+  console.log(
+    "Opening camera channel:",
+    topic
+  );
+
+
+  parentCameraChannel =
+    window.supabaseClient.channel(
+
+      topic,
+
+      {
+        config:{
+          private:true,
+
+          broadcast:{
+            self:false
+          }
+        }
+      }
+
+    );
+
+
+  /* -----------------------------------------
+     CHILD OFFER
+  ----------------------------------------- */
+
+  parentCameraChannel.on(
+
+    "broadcast",
+
+    {
+      event:"camera-offer"
+    },
+
+    ({payload}) => {
+
+      handleChildCameraOffer(
+        payload
+      );
+
+    }
+
+  );
+
+
+  /* -----------------------------------------
+     CHILD ICE
+  ----------------------------------------- */
+
+  parentCameraChannel.on(
+
+    "broadcast",
+
+    {
+      event:"camera-ice"
+    },
+
+    ({payload}) => {
+
+      handleChildCameraIce(
+        payload
+      );
+
+    }
+
+  );
+
+
+  /* -----------------------------------------
+     CHILD STATE
+  ----------------------------------------- */
+
+  parentCameraChannel.on(
+
+    "broadcast",
+
+    {
+      event:"camera-state"
+    },
+
+    ({payload}) => {
+
+      handleChildCameraState(
+        payload
+      );
+
+    }
+
+  );
+
+
+  /* -----------------------------------------
+     SUBSCRIBE
+  ----------------------------------------- */
+
+  parentCameraChannel.subscribe(
+
+    async status => {
+
+      console.log(
+        "Parent camera channel:",
+        status
+      );
+
+
+      if(
+        status ===
+        "SUBSCRIBED"
+      ){
+
+        console.log(
+          "✓ Parent camera channel connected"
+        );
+
+
+        /*
+          Give the child a moment to receive
+          the subscription before requesting.
+        */
+
+        setTimeout(() => {
+
+          requestChildCamera();
+
+        },500);
+
+      }
+
+
+      if(
+        status ===
+        "CHANNEL_ERROR"
+      ){
+
+        setParentCameraStatus(
+
+          "error",
+
+          "Camera channel error",
+
+          "The secure camera signaling channel could not connect."
+
+        );
+
+      }
+
+
+      if(
+        status ===
+        "TIMED_OUT"
+      ){
+
+        setParentCameraStatus(
+
+          "error",
+
+          "Camera channel timeout",
+
+          "The secure camera channel did not respond."
+
+        );
+
+      }
+
+    }
+
+  );
+
+}
+
+
+/* =========================================================
+   MANUAL CAMERA BUTTON
+========================================================= */
+
+const requestCameraButton =
+  $("requestCameraBtn");
+
+
+if(requestCameraButton){
+
+  requestCameraButton.addEventListener(
+
+    "click",
+
+    requestChildCamera
+
+  );
+
+}
+
+
+/* =========================================================
+   CLEANUP
+========================================================= */
+
+window.addEventListener(
+  "beforeunload",
+  () => {
+
+    closeParentCameraPeer();
+
+    if(parentCameraChannel){
+
+      try{
+
+        window.supabaseClient
+          .removeChannel(
+            parentCameraChannel
+          );
+
+      }catch(error){}
+
+    }
+
+  }
+);
 /* =========================================================
    SETUP PARENT CAMERA CHANNEL
 ========================================================= */

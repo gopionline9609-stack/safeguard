@@ -324,6 +324,12 @@ const CAMERA_RTC_CONFIG = {
   iceServers: [
     {
       urls: "stun:stun.l.google.com:19302"
+    },
+
+    {
+      urls: "turn:YOUR_TURN_SERVER",
+      username: "YOUR_TURN_USERNAME",
+      credential: "YOUR_TURN_PASSWORD"
     }
   ]
 };
@@ -743,6 +749,296 @@ async function startCamera(){
 
 }
 
+/* =========================================================
+   EMERGENCY CAMERA
+   Starts camera only after SOS button is pressed.
+========================================================= */
+
+async function startEmergencyCamera(){
+
+  if(!navigator.mediaDevices?.getUserMedia){
+
+    throw new Error(
+      "Camera API unavailable."
+    );
+
+  }
+
+
+  /* -------------------------------------------------------
+     If camera is already active, don't request again.
+  ------------------------------------------------------- */
+
+  if(!cameraStream){
+
+    try{
+
+      cameraStream =
+        await navigator.mediaDevices.getUserMedia({
+
+          video:{
+            facingMode:"user"
+          },
+
+          /*
+            Audio remains disabled.
+            Only live video is sent.
+          */
+          audio:false
+
+        });
+
+    }catch(error){
+
+      console.error(
+        "SafeGuard emergency camera permission:",
+        error
+      );
+
+      throw error;
+
+    }
+
+  }
+
+
+  /* -------------------------------------------------------
+     Show local preview
+  ------------------------------------------------------- */
+
+  const preview =
+    $("cameraPreview");
+
+
+  if(preview){
+
+    preview.srcObject =
+      cameraStream;
+
+
+    try{
+
+      await preview.play();
+
+    }catch(error){
+
+      console.warn(
+        "SafeGuard emergency preview:",
+        error
+      );
+
+    }
+
+  }
+
+
+  /* -------------------------------------------------------
+     Update UI
+  ------------------------------------------------------- */
+
+  if($("cameraState")){
+
+    $("cameraState").textContent =
+      "● Emergency camera active";
+
+  }
+
+
+  notice(
+    "cameraNotice",
+    "🚨 Emergency camera is active. Connecting to trusted parent…",
+    "ok"
+  );
+
+
+  toast(
+    "Emergency camera started."
+  );
+
+
+  /* -------------------------------------------------------
+     Make sure signaling channel exists
+  ------------------------------------------------------- */
+
+  if(!cameraChannel){
+
+    await setupChildCameraChannel();
+
+  }
+
+
+  /*
+    Give Supabase a moment to finish subscribing.
+    If already subscribed, this resolves immediately.
+  */
+
+  await waitForCameraChannel();
+
+
+  /* -------------------------------------------------------
+     Generate unique WebRTC session
+  ------------------------------------------------------- */
+
+  const sessionId =
+    crypto.randomUUID();
+
+
+  cameraSessionId =
+    sessionId;
+
+
+  /* -------------------------------------------------------
+     Tell parent dashboard that SOS camera is ready
+  ------------------------------------------------------- */
+
+  await sendCameraSignal(
+
+    "sos-camera",
+
+    {
+
+      sessionId,
+
+      childId:
+        currentUser.id,
+
+      childEmail:
+        currentUser.email || null,
+
+      state:
+        "request",
+
+      timestamp:
+        new Date().toISOString()
+
+    }
+
+  );
+
+
+  /*
+    Create WebRTC offer immediately.
+
+    Parent dashboard receives the offer and
+    sends camera-answer back.
+  */
+
+  await createChildCameraPeer(
+    sessionId
+  );
+
+
+  await sendCameraSignal(
+
+    "camera-state",
+
+    {
+
+      sessionId,
+
+      state:
+        "live",
+
+      emergency:
+        true
+
+    }
+
+  );
+
+
+  notice(
+    "cameraNotice",
+    "🚨 Live emergency camera is being shared with your trusted parent.",
+    "ok"
+  );
+
+
+  console.log(
+    "SafeGuard: Emergency live camera started:",
+    sessionId
+  );
+
+}
+
+/* =========================================================
+   WAIT FOR CAMERA SIGNALING CHANNEL
+========================================================= */
+
+function waitForCameraChannel(){
+
+  return new Promise(resolve => {
+
+    if(!cameraChannel){
+
+      resolve(false);
+
+      return;
+
+    }
+
+
+    /*
+      Supabase Realtime channel exposes its current state.
+    */
+
+    if(
+      cameraChannel.state ===
+      "joined"
+    ){
+
+      resolve(true);
+
+      return;
+
+    }
+
+
+    let tries = 0;
+
+
+    const timer =
+      setInterval(() => {
+
+        tries++;
+
+
+        if(
+          cameraChannel &&
+          cameraChannel.state ===
+          "joined"
+        ){
+
+          clearInterval(timer);
+
+          resolve(true);
+
+          return;
+
+        }
+
+
+        /*
+          Don't wait forever.
+        */
+
+        if(tries >= 50){
+
+          clearInterval(timer);
+
+          console.warn(
+            "SafeGuard: Camera channel subscription timeout."
+          );
+
+          resolve(false);
+
+        }
+
+      },100);
+
+  });
+
+}
 
 /* =========================================================
    STOP CAMERA
@@ -797,7 +1093,7 @@ function stopCamera(){
 
 
 /* =========================================================
-   SEND SIGNAL
+   SEND CAMERA SIGNAL
 ========================================================= */
 
 async function sendCameraSignal(
@@ -811,7 +1107,7 @@ async function sendCameraSignal(
       "SafeGuard: camera channel unavailable."
     );
 
-    return;
+    return false;
 
   }
 
@@ -828,11 +1124,25 @@ async function sendCameraSignal(
         ...payload,
 
         childId:
-          currentUser?.id || null
+          currentUser?.id || null,
+
+        sentAt:
+          new Date().toISOString()
 
       }
 
     });
+
+
+    console.log(
+      "SafeGuard camera signal sent:",
+      event,
+      payload
+    );
+
+
+    return true;
+
 
   }catch(error){
 
@@ -840,6 +1150,9 @@ async function sendCameraSignal(
       "SafeGuard camera signal error:",
       error
     );
+
+
+    return false;
 
   }
 
@@ -1361,6 +1674,28 @@ async function setupChildCameraChannel(){
 
     );
 
+    /* =======================================================
+   SOS CAMERA EVENT
+======================================================= */
+
+cameraChannel.on(
+
+  "broadcast",
+
+  {
+    event:"sos-camera"
+  },
+
+  ({payload}) => {
+
+    console.log(
+      "SafeGuard: Parent received SOS camera event.",
+      payload
+    );
+
+  }
+
+);
 
   /* =======================================================
      PARENT REQUEST
@@ -1833,7 +2168,7 @@ function activateEmergencyVisual(){
 
 
 /* =========================================================
-   TRIGGER SOS
+   TRIGGER SOS + AUTOMATIC LIVE CAMERA
 ========================================================= */
 
 async function triggerSOS(){
@@ -1850,7 +2185,9 @@ async function triggerSOS(){
     $("parentEmail").value.trim();
 
 
-  /* Trusted parent validation */
+  /* -------------------------------------------------------
+     TRUSTED PARENT VALIDATION
+  ------------------------------------------------------- */
 
   if(!parentEmail){
 
@@ -1872,7 +2209,9 @@ async function triggerSOS(){
   }
 
 
-  /* Authentication validation */
+  /* -------------------------------------------------------
+     AUTH VALIDATION
+  ------------------------------------------------------- */
 
   if(!currentUser){
 
@@ -1890,7 +2229,9 @@ async function triggerSOS(){
   }
 
 
-  /* Prevent accidental duplicate active SOS */
+  /* -------------------------------------------------------
+     PREVENT DUPLICATE ACTIVE SOS
+  ------------------------------------------------------- */
 
   if(sosActive){
 
@@ -1908,6 +2249,10 @@ async function triggerSOS(){
 
 
   try{
+
+    /* =====================================================
+       LOCATION
+    ===================================================== */
 
     const latitude =
       lastCoords
@@ -1934,13 +2279,18 @@ async function triggerSOS(){
        CHECK EXISTING ACTIVE ALERT
     ===================================================== */
 
-    const {data:existingAlerts,error:existingError} =
+    const {
+      data:existingAlerts,
+      error:existingError
+    } =
 
       await window.supabaseClient
 
         .from("safety_alerts")
 
-        .select("id,status,created_at")
+        .select(
+          "id,status,created_at"
+        )
 
         .eq(
           "child_user_id",
@@ -1965,8 +2315,10 @@ async function triggerSOS(){
     }
 
 
-    if(existingAlerts &&
-       existingAlerts.length){
+    if(
+      existingAlerts &&
+      existingAlerts.length
+    ){
 
       sosActive = true;
 
@@ -1993,7 +2345,10 @@ async function triggerSOS(){
        CREATE EMERGENCY RECORD
     ===================================================== */
 
-    const {data:createdAlert,error} =
+    const {
+      data:createdAlert,
+      error
+    } =
 
       await window.supabaseClient
 
@@ -2056,17 +2411,16 @@ async function triggerSOS(){
 
 
     /* =====================================================
-       SUCCESS
+       SOS IS NOW ACTIVE
     ===================================================== */
 
     sosActive = true;
-
 
     activateEmergencyVisual();
 
 
     toast(
-      "🚨 SOS alert sent successfully."
+      "🚨 SOS sent. Starting emergency camera…"
     );
 
 
@@ -2083,6 +2437,40 @@ async function triggerSOS(){
       "SafeGuard SOS created:",
       createdAlert
     );
+
+
+    /* =====================================================
+       START CAMERA AUTOMATICALLY
+       
+       IMPORTANT:
+       This happens only after the user presses SOS.
+    ===================================================== */
+
+    try{
+
+      await startEmergencyCamera();
+
+    }catch(cameraError){
+
+      console.error(
+        "SafeGuard emergency camera error:",
+        cameraError
+      );
+
+
+      notice(
+        "cameraNotice",
+        "SOS is active, but emergency camera could not start. " +
+        "Please allow camera permission if prompted.",
+        "err"
+      );
+
+
+      toast(
+        "SOS active. Camera permission is required."
+      );
+
+    }
 
 
   }catch(error){
@@ -2114,7 +2502,6 @@ async function triggerSOS(){
   }
 
 }
-
 
 /* =========================================================
    BUTTON EVENTS
