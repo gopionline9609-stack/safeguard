@@ -137,6 +137,65 @@ video{display:block;width:100%;height:300px;object-fit:cover;background:#02050a}
   .input-row{flex-direction:column}.camera-actions{flex-direction:column}.sos-wrap{padding:25px}.sos{width:200px}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* =========================================================
+   FINAL SOS ACTIVE STATE
+========================================================= */
+
+.sos:disabled{
+  cursor:not-allowed;
+  opacity:.82;
+}
+
+.sos.sos-confirmed{
+  border-color:rgba(255,70,100,.95);
+
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      rgba(255,120,145,.55),
+      rgba(255,45,82,.20) 42%,
+      rgba(90,8,30,.32) 72%,
+      rgba(0,0,0,.12)
+    );
+
+  box-shadow:
+    0 0 0 12px rgba(255,55,90,.06),
+    0 0 75px rgba(255,55,90,.45),
+    inset 0 0 70px rgba(255,55,90,.24);
+
+  animation:
+    activeSOSGlow 1.4s ease-in-out infinite;
+}
+
+@keyframes activeSOSGlow{
+
+  0%,100%{
+    box-shadow:
+      0 0 0 12px rgba(255,55,90,.05),
+      0 0 55px rgba(255,55,90,.25),
+      inset 0 0 50px rgba(255,55,90,.14);
+  }
+
+  50%{
+    box-shadow:
+      0 0 0 20px rgba(255,55,90,.025),
+      0 0 105px rgba(255,55,90,.48),
+      inset 0 0 80px rgba(255,55,90,.28);
+  }
+
+}
+
+@media(max-width:560px){
+
+  .sos.sos-confirmed{
+    box-shadow:
+      0 0 0 10px rgba(255,55,90,.05),
+      0 0 55px rgba(255,55,90,.35),
+      inset 0 0 55px rgba(255,55,90,.20);
+  }
+
+}
+
 </style>
 </head>
 <body>
@@ -242,93 +301,287 @@ video{display:block;width:100%;height:300px;object-fit:cover;background:#02050a}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script>
+"use strict";
+
+/* =========================================================
+   SAFEGUARD CHILD — FINAL SAFETY ENGINE
+========================================================= */
+
 let currentUser = null;
 let cameraStream = null;
 let locationWatchId = null;
 let lastCoords = null;
 let geocodeTimer = null;
 
+let sosSending = false;
+let sosActive = false;
+
 const $ = (id) => document.getElementById(id);
 
+
+/* =========================================================
+   TOAST
+========================================================= */
+
 function toast(message){
-  const el = $("toast"); el.textContent = message; el.classList.add("show");
-  clearTimeout(window.__toastTimer); window.__toastTimer = setTimeout(()=>el.classList.remove("show"),3200);
+  const el = $("toast");
+
+  if(!el) return;
+
+  el.textContent = message;
+  el.classList.add("show");
+
+  clearTimeout(window.__toastTimer);
+
+  window.__toastTimer = setTimeout(() => {
+    el.classList.remove("show");
+  }, 3200);
 }
-function notice(id,message,type="ok"){
-  const el=$(id); el.textContent=message; el.className="notice show "+type;
+
+
+/* =========================================================
+   NOTICE
+========================================================= */
+
+function notice(id, message, type = "ok"){
+  const el = $(id);
+
+  if(!el) return;
+
+  el.textContent = message;
+  el.className = "notice show " + type;
 }
+
+
+/* =========================================================
+   SUPABASE READY
+========================================================= */
+
 function waitForSupabase(){
-  return new Promise(resolve=>{
-    if(window.supabaseClient) return resolve(true);
-    let tries=0; const t=setInterval(()=>{
+
+  return new Promise(resolve => {
+
+    if(window.supabaseClient){
+      resolve(true);
+      return;
+    }
+
+    let tries = 0;
+
+    const timer = setInterval(() => {
+
       tries++;
-      if(window.supabaseClient){clearInterval(t);resolve(true)}
-      else if(tries>80){clearInterval(t);resolve(false)}
+
+      if(window.supabaseClient){
+
+        clearInterval(timer);
+        resolve(true);
+
+      }else if(tries > 80){
+
+        clearInterval(timer);
+        resolve(false);
+
+      }
+
     },100);
+
   });
+
 }
+
+
+/* =========================================================
+   CURRENT USER
+========================================================= */
+
 async function getCurrentUser(){
-  if(typeof window.supabaseClient==="undefined") return null;
-  const {data,error}=await window.supabaseClient.auth.getUser();
-  if(error||!data.user) return null;
+
+  if(typeof window.supabaseClient === "undefined"){
+    console.error("SafeGuard: Supabase client unavailable.");
+    return null;
+  }
+
+  const {data,error} =
+    await window.supabaseClient.auth.getUser();
+
+  if(error || !data.user){
+
+    console.error(
+      "SafeGuard auth error:",
+      error
+    );
+
+    return null;
+  }
+
   return data.user;
 }
+
+
+/* =========================================================
+   CHILD ACCESS
+========================================================= */
+
 async function checkChildAccess(){
-  const user=await getCurrentUser();
-  if(!user){window.location.replace("index.html");return null}
-  const selectedRole=localStorage.getItem("safeguard_role");
-  if(selectedRole==="parent"){
-    window.location.replace("parent-dashboard.html?role=parent");return null
+
+  const user = await getCurrentUser();
+
+  if(!user){
+
+    window.location.replace("index.html");
+
+    return null;
   }
-  currentUser=user;
-  $("authState").textContent="● Secure session";
+
+  const selectedRole =
+    localStorage.getItem("safeguard_role");
+
+  if(selectedRole === "parent"){
+
+    window.location.replace(
+      "parent-dashboard.html?role=parent"
+    );
+
+    return null;
+  }
+
+  currentUser = user;
+
+  const authState = $("authState");
+
+  if(authState){
+    authState.textContent = "● Secure session";
+  }
+
   return user;
 }
+
+
+/* =========================================================
+   TRUSTED CONTACTS
+========================================================= */
+
 async function loadTrustedContacts(){
+
   if(!currentUser) return;
-  const {data,error}=await window.supabaseClient
-    .from("trusted_contacts").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false});
-  if(error){console.warn("SafeGuard trusted contacts:",error.message);return}
-  if(data && data.length){
-    const first=data[0];
-    $("parentEmail").value=first.parent_email||"";
-  }
-}
-async function saveParent(){
-  if(!currentUser){
-    toast("Please sign in again.");
+
+  const {data,error} =
+    await window.supabaseClient
+      .from("trusted_contacts")
+      .select("*")
+      .eq("user_id",currentUser.id)
+      .order("created_at",{ascending:false});
+
+  if(error){
+
+    console.warn(
+      "SafeGuard trusted contacts:",
+      error.message
+    );
+
     return;
   }
 
-  const email=$("parentEmail").value.trim();
+  if(data && data.length){
+
+    const first = data[0];
+
+    $("parentEmail").value =
+      first.parent_email || "";
+
+  }
+}
+
+
+/* =========================================================
+   SAVE PARENT
+========================================================= */
+
+async function saveParent(){
+
+  if(!currentUser){
+
+    toast("Please sign in again.");
+
+    notice(
+      "parentNotice",
+      "Your secure session is unavailable.",
+      "err"
+    );
+
+    return;
+  }
+
+  const email =
+    $("parentEmail").value.trim().toLowerCase();
 
   if(!email){
+
     notice(
       "parentNotice",
       "Please enter a parent / guardian email.",
       "err"
     );
+
+    $("parentEmail").focus();
+
     return;
   }
 
-  const {error}=await window.supabaseClient
-    .from("trusted_contacts")
-    .insert({
-      user_id:currentUser.id,
-      child_email:currentUser.email,
-      parent_email:email,
-      relationship:"parent",
-      verified:false
-    });
+
+  const button = $("saveParentBtn");
+
+  if(button){
+    button.disabled = true;
+    button.textContent = "Saving...";
+  }
+
+
+  const {error} =
+    await window.supabaseClient
+      .from("trusted_contacts")
+      .insert({
+
+        user_id: currentUser.id,
+
+        child_email:
+          currentUser.email || null,
+
+        parent_email: email,
+
+        relationship: "parent",
+
+        verified: false
+
+      });
+
+
+  if(button){
+
+    button.disabled = false;
+    button.textContent = "Save";
+
+  }
+
 
   if(error){
+
+    console.error(
+      "SafeGuard parent save error:",
+      error
+    );
+
     notice(
       "parentNotice",
-      "Could not save the trusted parent: "+error.message,
+      "Could not save the trusted parent: " +
+      error.message,
       "err"
     );
+
     return;
   }
+
 
   notice(
     "parentNotice",
@@ -338,67 +591,440 @@ async function saveParent(){
 
   toast("Trusted parent contact saved.");
 }
+
+
+/* =========================================================
+   CAMERA
+========================================================= */
+
 async function startCamera(){
+
   if(!navigator.mediaDevices?.getUserMedia){
-    notice("cameraNotice","Camera access is not supported by this browser.","err");return;
+
+    notice(
+      "cameraNotice",
+      "Camera access is not supported by this browser.",
+      "err"
+    );
+
+    return;
   }
+
+
   try{
-    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});
-    $("cameraPreview").srcObject=cameraStream;
-    $("cameraState").textContent="● Camera active";
-    notice("cameraNotice","Camera preview is active on this device.","ok");
+
+    if(cameraStream){
+
+      cameraStream
+        .getTracks()
+        .forEach(track => track.stop());
+
+    }
+
+
+    cameraStream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video:{
+          facingMode:"user"
+        },
+
+        audio:false
+
+      });
+
+
+    $("cameraPreview").srcObject =
+      cameraStream;
+
+
+    $("cameraState").textContent =
+      "● Camera active";
+
+
+    notice(
+      "cameraNotice",
+      "Camera preview is active on this device.",
+      "ok"
+    );
+
+
     toast("Camera enabled.");
+
   }catch(error){
-    notice("cameraNotice","Camera permission was not granted or is unavailable.","err");
+
+    console.error(
+      "SafeGuard camera error:",
+      error
+    );
+
+    notice(
+      "cameraNotice",
+      "Camera permission was not granted or is unavailable.",
+      "err"
+    );
+
     toast("Camera permission unavailable.");
+
   }
+
 }
+
+
 function stopCamera(){
-  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null}
-  $("cameraPreview").srcObject=null;$("cameraState").textContent="○ Camera standby";
-}
-async function reverseGeocode(lat,lon){
-  try{
-    const url=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
-    const res=await fetch(url,{headers:{"Accept":"application/json"}});
-    if(!res.ok) throw new Error("geocoder");
-    const data=await res.json();
-    $("address").textContent=data.display_name||"Readable address unavailable.";
-  }catch(e){
-    $("address").textContent="GPS received. Readable address could not be loaded.";
+
+  if(cameraStream){
+
+    cameraStream
+      .getTracks()
+      .forEach(track => track.stop());
+
+    cameraStream = null;
+
   }
+
+
+  if($("cameraPreview")){
+
+    $("cameraPreview").srcObject = null;
+
+  }
+
+
+  if($("cameraState")){
+
+    $("cameraState").textContent =
+      "○ Camera standby";
+
+  }
+
 }
+
+
+/* =========================================================
+   REVERSE GEOCODING
+========================================================= */
+
+async function reverseGeocode(lat,lon){
+
+  try{
+
+    const url =
+      `https://nominatim.openstreetmap.org/reverse` +
+      `?format=jsonv2` +
+      `&lat=${encodeURIComponent(lat)}` +
+      `&lon=${encodeURIComponent(lon)}`;
+
+
+    const response =
+      await fetch(url,{
+        headers:{
+          "Accept":"application/json"
+        }
+      });
+
+
+    if(!response.ok){
+
+      throw new Error(
+        "Reverse geocoding failed"
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    $("address").textContent =
+      data.display_name ||
+      "Readable address unavailable.";
+
+  }catch(error){
+
+    $("address").textContent =
+      "GPS received. Readable address could not be loaded.";
+
+  }
+
+}
+
+
+/* =========================================================
+   LOCATION
+========================================================= */
+
 function onPosition(position){
-  const c=position.coords; lastCoords={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy};
-  $("coordinates").textContent=`${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}`;
-  $("accuracy").textContent=`Accuracy ±${Math.round(c.accuracy||0)} m`;
-  $("updated").textContent=`Updated ${new Date().toLocaleTimeString()}`;
-  $("gpsPill").textContent="GPS location active";
-  $("locationState").textContent="● Location active";
+
+  const coordinates =
+    position.coords;
+
+
+  lastCoords = {
+
+    lat:coordinates.latitude,
+
+    lon:coordinates.longitude,
+
+    accuracy:coordinates.accuracy
+
+  };
+
+
+  $("coordinates").textContent =
+    `${coordinates.latitude.toFixed(6)}, ` +
+    `${coordinates.longitude.toFixed(6)}`;
+
+
+  $("accuracy").textContent =
+    `Accuracy ±${Math.round(
+      coordinates.accuracy || 0
+    )} m`;
+
+
+  $("updated").textContent =
+    `Updated ${new Date().toLocaleTimeString()}`;
+
+
+  $("gpsPill").textContent =
+    "GPS location active";
+
+
+  $("locationState").textContent =
+    "● Location active";
+
+
   clearTimeout(geocodeTimer);
-  geocodeTimer=setTimeout(()=>reverseGeocode(c.latitude,c.longitude),700);
+
+
+  geocodeTimer =
+    setTimeout(() => {
+
+      reverseGeocode(
+        coordinates.latitude,
+        coordinates.longitude
+      );
+
+    },700);
+
 }
+
+
 function startLocation(){
-  if(!navigator.geolocation){notice("locationNotice","Geolocation is not supported by this browser.","err");return}
-  if(locationWatchId!==null) navigator.geolocation.clearWatch(locationWatchId);
-  notice("locationNotice","Requesting secure location permission…","ok");
-  locationWatchId=navigator.geolocation.watchPosition(onPosition,(error)=>{
-    $("locationState").textContent="○ Location standby";
-    $("gpsPill").textContent="Location unavailable";
-    notice("locationNotice","Location access was denied or unavailable.","err");
-  },{enableHighAccuracy:true,maximumAge:10000,timeout:15000});
+
+  if(!navigator.geolocation){
+
+    notice(
+      "locationNotice",
+      "Geolocation is not supported by this browser.",
+      "err"
+    );
+
+    return;
+  }
+
+
+  if(locationWatchId !== null){
+
+    navigator.geolocation.clearWatch(
+      locationWatchId
+    );
+
+  }
+
+
+  notice(
+    "locationNotice",
+    "Requesting secure location permission…",
+    "ok"
+  );
+
+
+  locationWatchId =
+    navigator.geolocation.watchPosition(
+
+      onPosition,
+
+      error => {
+
+        console.warn(
+          "SafeGuard location error:",
+          error
+        );
+
+
+        $("locationState").textContent =
+          "○ Location standby";
+
+
+        $("gpsPill").textContent =
+          "Location unavailable";
+
+
+        notice(
+          "locationNotice",
+          "Location access was denied or unavailable.",
+          "err"
+        );
+
+      },
+
+      {
+        enableHighAccuracy:true,
+        maximumAge:10000,
+        timeout:15000
+      }
+
+    );
+
 }
+
+
 function stopLocation(){
-  if(locationWatchId!==null){navigator.geolocation.clearWatch(locationWatchId);locationWatchId=null}
-  $("locationState").textContent="○ Location standby";$("gpsPill").textContent="GPS paused";
+
+  if(locationWatchId !== null){
+
+    navigator.geolocation.clearWatch(
+      locationWatchId
+    );
+
+    locationWatchId = null;
+
+  }
+
+
+  $("locationState").textContent =
+    "○ Location standby";
+
+
+  $("gpsPill").textContent =
+    "GPS paused";
+
 }
+
+
+/* =========================================================
+   SOS BUTTON VISUAL STATE
+========================================================= */
+
+function setSOSLoading(loading){
+
+  const button = $("sosBtn");
+
+  if(!button) return;
+
+
+  if(loading){
+
+    button.disabled = true;
+
+    button.dataset.originalHtml =
+      button.innerHTML;
+
+    button.innerHTML =
+      `<strong>...</strong>
+       <span>SENDING ALERT</span>`;
+
+    button.style.filter =
+      "brightness(1.35)";
+
+  }else{
+
+    button.disabled = false;
+
+    if(button.dataset.originalHtml){
+
+      button.innerHTML =
+        button.dataset.originalHtml;
+
+    }
+
+    button.style.filter = "";
+
+  }
+
+}
+
+
+/* =========================================================
+   SOS SUCCESS VISUAL
+========================================================= */
+
+function activateEmergencyVisual(){
+
+  const button = $("sosBtn");
+
+  if(!button) return;
+
+
+  button.classList.add(
+    "sos-confirmed"
+  );
+
+
+  button.animate(
+
+    [
+
+      {
+        transform:"scale(1)",
+        filter:"brightness(1)"
+      },
+
+      {
+        transform:"scale(1.10)",
+        filter:"brightness(1.65)"
+      },
+
+      {
+        transform:"scale(.98)",
+        filter:"brightness(1.25)"
+      },
+
+      {
+        transform:"scale(1)",
+        filter:"brightness(1)"
+      }
+
+    ],
+
+    {
+      duration:1100,
+      easing:"cubic-bezier(.2,.8,.2,1)"
+    }
+
+  );
+
+}
+
+
+/* =========================================================
+   TRIGGER SOS
+========================================================= */
+
 async function triggerSOS(){
 
-  const parentEmail = $("parentEmail").value.trim();
+  if(sosSending){
 
-  // Trusted parent check
+    toast("SOS is already being sent.");
+
+    return;
+  }
+
+
+  const parentEmail =
+    $("parentEmail").value.trim();
+
+
+  /* Trusted parent validation */
+
   if(!parentEmail){
-    toast("Add a trusted parent before using SOS.");
+
+    toast(
+      "Add a trusted parent before using SOS."
+    );
+
 
     notice(
       "parentNotice",
@@ -406,13 +1032,19 @@ async function triggerSOS(){
       "err"
     );
 
+
     $("parentEmail").focus();
+
     return;
   }
 
-  // Auth check
+
+  /* Authentication validation */
+
   if(!currentUser){
+
     toast("Please sign in again.");
+
 
     notice(
       "parentNotice",
@@ -420,125 +1052,353 @@ async function triggerSOS(){
       "err"
     );
 
+
     return;
   }
 
-  // Emergency button animation
-  const sosButton = $("sosBtn");
 
-  if(sosButton){
-    sosButton.animate(
-      [
-        {
-          transform:"scale(1)",
-          filter:"brightness(1)"
-        },
-        {
-          transform:"scale(1.08)",
-          filter:"brightness(1.5)"
-        },
-        {
-          transform:"scale(0.98)",
-          filter:"brightness(1.2)"
-        },
-        {
-          transform:"scale(1)",
-          filter:"brightness(1)"
-        }
-      ],
-      {
-        duration:900,
-        easing:"cubic-bezier(.2,.8,.2,1)"
-      }
+  /* Prevent accidental duplicate active SOS */
+
+  if(sosActive){
+
+    toast(
+      "Emergency SOS is already active."
     );
+
+    return;
   }
 
-  // Current GPS data
-  const latitude = lastCoords ? lastCoords.lat : null;
-  const longitude = lastCoords ? lastCoords.lon : null;
 
-  const locationText = lastCoords
-    ? `${lastCoords.lat.toFixed(6)}, ${lastCoords.lon.toFixed(6)}`
-    : "Location unavailable";
+  sosSending = true;
 
-  // Save real emergency alert to Supabase
-  const { error } = await window.supabaseClient
-  .from("safety_alerts")
-  .insert({
-    child_user_id: currentUser.id,
-    child_email: currentUser.email || null,
-    alert_type: "SOS",
-    latitude: latitude,
-    longitude: longitude,
-    address: locationText,
-    status: "active"
-  });
+  setSOSLoading(true);
 
-  // Database error
-  if(error){
 
-    console.error("SafeGuard SOS error:", error);
+  try{
 
-    toast("SOS could not be sent.");
+    const latitude =
+      lastCoords
+        ? lastCoords.lat
+        : null;
+
+
+    const longitude =
+      lastCoords
+        ? lastCoords.lon
+        : null;
+
+
+    const locationText =
+      lastCoords
+
+        ? `${lastCoords.lat.toFixed(6)}, ` +
+          `${lastCoords.lon.toFixed(6)}`
+
+        : "Location unavailable";
+
+
+    /* =====================================================
+       CHECK EXISTING ACTIVE ALERT
+    ===================================================== */
+
+    const {data:existingAlerts,error:existingError} =
+
+      await window.supabaseClient
+
+        .from("safety_alerts")
+
+        .select("id,status,created_at")
+
+        .eq(
+          "child_user_id",
+          currentUser.id
+        )
+
+        .eq(
+          "status",
+          "active"
+        )
+
+        .limit(1);
+
+
+    if(existingError){
+
+      console.warn(
+        "SafeGuard active SOS check:",
+        existingError
+      );
+
+    }
+
+
+    if(existingAlerts &&
+       existingAlerts.length){
+
+      sosActive = true;
+
+      setSOSLoading(false);
+
+      toast(
+        "An SOS alert is already active."
+      );
+
+      notice(
+        "parentNotice",
+        "🚨 An active emergency alert already exists.",
+        "ok"
+      );
+
+      activateEmergencyVisual();
+
+      return;
+
+    }
+
+
+    /* =====================================================
+       CREATE EMERGENCY RECORD
+    ===================================================== */
+
+    const {data:createdAlert,error} =
+
+      await window.supabaseClient
+
+        .from("safety_alerts")
+
+        .insert({
+
+          child_user_id:
+            currentUser.id,
+
+          child_email:
+            currentUser.email || null,
+
+          alert_type:
+            "SOS",
+
+          latitude:
+            latitude,
+
+          longitude:
+            longitude,
+
+          address:
+            locationText,
+
+          status:
+            "active"
+
+        })
+
+        .select()
+
+        .single();
+
+
+    if(error){
+
+      console.error(
+        "SafeGuard SOS insert error:",
+        error
+      );
+
+
+      toast(
+        "SOS could not be sent."
+      );
+
+
+      notice(
+        "parentNotice",
+        "Emergency alert could not be saved: " +
+        error.message,
+        "err"
+      );
+
+
+      return;
+
+    }
+
+
+    /* =====================================================
+       SUCCESS
+    ===================================================== */
+
+    sosActive = true;
+
+
+    activateEmergencyVisual();
+
+
+    toast(
+      "🚨 SOS alert sent successfully."
+    );
+
 
     notice(
       "parentNotice",
-      "Emergency alert could not be saved: " + error.message,
+      `🚨 SOS ALERT ACTIVE. ` +
+      `Emergency record created. ` +
+      `Location: ${locationText}`,
+      "ok"
+    );
+
+
+    console.log(
+      "SafeGuard SOS created:",
+      createdAlert
+    );
+
+
+  }catch(error){
+
+    console.error(
+      "SafeGuard SOS unexpected error:",
+      error
+    );
+
+
+    toast(
+      "Emergency request failed."
+    );
+
+
+    notice(
+      "parentNotice",
+      "Unexpected emergency error. Please try again.",
       "err"
+    );
+
+
+  }finally{
+
+    sosSending = false;
+
+    setSOSLoading(false);
+
+  }
+
+}
+
+
+/* =========================================================
+   BUTTON EVENTS
+========================================================= */
+
+$("saveParentBtn")
+  .addEventListener(
+    "click",
+    saveParent
+  );
+
+
+$("cameraBtn")
+  .addEventListener(
+    "click",
+    startCamera
+  );
+
+
+$("cameraStopBtn")
+  .addEventListener(
+    "click",
+    stopCamera
+  );
+
+
+$("locationBtn")
+  .addEventListener(
+    "click",
+    startLocation
+  );
+
+
+$("locationStopBtn")
+  .addEventListener(
+    "click",
+    stopLocation
+  );
+
+
+$("sosBtn")
+  .addEventListener(
+    "click",
+    triggerSOS
+  );
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+$("logoutBtn")
+  .addEventListener(
+    "click",
+    async () => {
+
+      try{
+
+        if(window.supabaseClient){
+
+          await window.supabaseClient
+            .auth
+            .signOut();
+
+        }
+
+      }finally{
+
+        localStorage.removeItem(
+          "safeguard_role"
+        );
+
+
+        stopCamera();
+        stopLocation();
+
+
+        window.location.replace(
+          "index.html"
+        );
+
+      }
+
+    }
+  );
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+(async function(){
+
+  const ready =
+    await waitForSupabase();
+
+
+  if(!ready){
+
+    window.location.replace(
+      "index.html"
     );
 
     return;
   }
 
-  // SUCCESS
-  toast("SOS alert sent successfully.");
 
-  notice(
-    "parentNotice",
-    `🚨 SOS ALERT ACTIVE. Emergency record created. Location: ${locationText}`,
-    "ok"
-  );
+  const user =
+    await checkChildAccess();
 
-  // Strong emergency pulse after successful SOS
-  if(sosButton){
-    sosButton.animate(
-      [
-        {
-          boxShadow:"0 0 0 0 rgba(255,60,90,.75)"
-        },
-        {
-          boxShadow:"0 0 0 18px rgba(255,60,90,0)"
-        },
-        {
-          boxShadow:"0 0 0 0 rgba(255,60,90,0)"
-        }
-      ],
-      {
-        duration:1200,
-        iterations:2,
-        easing:"ease-out"
-      }
-    );
+
+  if(user){
+
+    await loadTrustedContacts();
+
   }
 
-
-}
-$("saveParentBtn").addEventListener("click",saveParent);
-$("cameraBtn").addEventListener("click",startCamera);
-$("cameraStopBtn").addEventListener("click",stopCamera);
-$("locationBtn").addEventListener("click",startLocation);
-$("locationStopBtn").addEventListener("click",stopLocation);
-$("sosBtn").addEventListener("click",triggerSOS);
-$("logoutBtn").addEventListener("click",async()=>{
-  try{if(window.supabaseClient) await window.supabaseClient.auth.signOut()}finally{
-    localStorage.removeItem("safeguard_role");stopCamera();stopLocation();window.location.replace("index.html");
-  }
-});
-(async()=>{
-  const ready=await waitForSupabase();
-  if(!ready){window.location.replace("index.html");return}
-  const user=await checkChildAccess();
-  if(user) await loadTrustedContacts();
 })();
 </script>
 </body>

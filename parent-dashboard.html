@@ -1620,6 +1620,60 @@ body:before{
     transition-duration:.01ms!important;
   }
 }
+/* =========================================================
+   PREMIUM EMERGENCY STATUS ENHANCEMENT
+========================================================= */
+
+.emergency-status-card.is-active{
+  border-color:rgba(255,71,107,.68)!important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(70,12,30,.72),
+      rgba(10,8,22,.76)
+    );
+
+  animation:
+    emergencyStatusGlow 1.8s ease-in-out infinite;
+}
+
+.emergency-status-card.is-active .status-icon{
+  border-color:rgba(255,71,107,.52);
+
+  box-shadow:
+    0 0 35px rgba(255,55,85,.28),
+    inset 0 0 18px rgba(255,55,85,.08);
+
+  animation:
+    emergencyIconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes emergencyIconPulse{
+
+  0%,100%{
+    transform:scale(1);
+  }
+
+  50%{
+    transform:scale(1.08);
+  }
+
+}
+
+@media(max-width:760px){
+
+  .header-right{
+    gap:6px;
+  }
+
+  .logout{
+    padding:9px 10px;
+    font-size:11px;
+  }
+
+}
+
 </style>
 </head>
 
@@ -1646,32 +1700,33 @@ body:before{
 
   <div class="header-right">
 
-    <span class="parent-badge">
-      Parent / Guardian
-    </span>
+  <span class="parent-badge">
+    Parent / Guardian
+  </span>
 
-    <span class="secure-pill">
-      ● SECURE SESSION
-    </span>
+  <span class="secure-pill">
+    ● SECURE SESSION
+  </span>
 
-    <button
-      class="logout"
-      id="logoutBtn"
-    >
-<button
-  class="refresh-btn"
-  id="refreshBtn"
-  type="button"
-  aria-label="Refresh dashboard"
->
-  <span id="refreshIcon">↻</span>
-  <span class="refresh-text">Refresh</span>
-</button>
+  <button
+    class="refresh-btn"
+    id="refreshBtn"
+    type="button"
+    aria-label="Refresh dashboard"
+  >
+    <span id="refreshIcon">↻</span>
+    <span class="refresh-text">Refresh</span>
+  </button>
 
-      Sign out
-    </button>
+  <button
+    class="logout"
+    id="logoutBtn"
+    type="button"
+  >
+    ↪ Sign out
+  </button>
 
-  </div>
+</div>
 
 </header>
 
@@ -2041,14 +2096,14 @@ body:before{
 <script>
 "use strict";
 
-
 /* =========================================================
-   SAFE ELEMENT HELPER
+   SAFEGUARD PARENT COMMAND CENTER
 ========================================================= */
 
 function $(id){
   return document.getElementById(id);
 }
+
 
 
 /* =========================================================
@@ -2059,19 +2114,21 @@ let toastTimer;
 
 function toast(message){
 
-  const el=$("toast");
+  const el = $("toast");
 
   if(!el) return;
 
-  el.textContent=message;
+  el.textContent = message;
 
   el.classList.add("show");
 
   clearTimeout(toastTimer);
 
-  toastTimer=setTimeout(()=>{
-    el.classList.remove("show");
-  },3200);
+  toastTimer =
+    setTimeout(() => {
+      el.classList.remove("show");
+    },3200);
+
 }
 
 
@@ -2081,20 +2138,35 @@ function toast(message){
 
 async function getCurrentUser(){
 
-  if(typeof window.supabaseClient==="undefined"){
-    console.error("SafeGuard: Supabase client unavailable.");
+  if(typeof window.supabaseClient === "undefined"){
+
+    console.error(
+      "SafeGuard: Supabase client unavailable."
+    );
+
     return null;
   }
 
-  const {data,error}=
-    await window.supabaseClient.auth.getUser();
+
+  const {data,error} =
+    await window.supabaseClient
+      .auth
+      .getUser();
+
 
   if(error || !data.user){
-    console.error("SafeGuard auth error:",error);
+
+    console.error(
+      "SafeGuard auth error:",
+      error
+    );
+
     return null;
   }
 
+
   return data.user;
+
 }
 
 
@@ -2104,19 +2176,27 @@ async function getCurrentUser(){
 
 async function checkParentAccess(){
 
-  const user=await getCurrentUser();
+  const user =
+    await getCurrentUser();
+
 
   if(!user){
 
-    window.location.replace("index.html");
+    window.location.replace(
+      "index.html"
+    );
 
     return null;
   }
 
-  const role=
-    localStorage.getItem("safeguard_role");
 
-  if(role!=="parent"){
+  const role =
+    localStorage.getItem(
+      "safeguard_role"
+    );
+
+
+  if(role !== "parent"){
 
     window.location.replace(
       "dashboard.html?role=child"
@@ -2125,47 +2205,64 @@ async function checkParentAccess(){
     return null;
   }
 
+
   return user;
+
 }
 
 
 /* =========================================================
-   PARENT ACCOUNT
+   ACCOUNT
 ========================================================= */
 
 function renderParentAccount(user){
 
-  $("parentEmail").textContent=
-    user.email || "Guardian account";
+  $("parentEmail").textContent =
+    user.email ||
+    "Guardian account";
+
 }
 
 
 /* =========================================================
-   CONNECTED CHILD
+   CONNECTED CHILDREN
 ========================================================= */
 
-let connectedChildren=[];
+let connectedChildren = [];
+
 
 async function loadConnectedChildren(user){
 
-  const {data,error}=
+  const email =
+    (user.email || "").trim().toLowerCase();
+
+
+  const {data,error} =
     await window.supabaseClient
+
       .from("trusted_contacts")
+
       .select(
         "user_id,child_email,parent_email,relationship,verified,created_at"
       )
+
       .eq(
         "parent_email",
-        (user.email || "").toLowerCase()
+        email
       )
+
       .eq(
         "relationship",
         "parent"
       )
+
       .order(
         "created_at",
-        {ascending:false}
+        {
+          ascending:false
+        }
       );
+
 
   if(error){
 
@@ -2174,112 +2271,219 @@ async function loadConnectedChildren(user){
       error
     );
 
-    $("childAccountStatus").textContent=
+
+    connectedChildren = [];
+
+
+    $("childAccountStatus").textContent =
       "Connection data unavailable";
 
-    $("childEmail").textContent=
+
+    $("childEmail").textContent =
       "Unable to load connected child";
 
-    $("accountValue").textContent=
+
+    $("accountValue").textContent =
       "Connection check required";
 
-    $("connectionBadge").textContent=
+
+    $("connectionBadge").textContent =
       "● CONNECTION CHECK";
 
+
     return [];
+
   }
 
-  connectedChildren=data || [];
+
+  connectedChildren =
+    data || [];
+
 
   if(!connectedChildren.length){
 
-    $("childAccountStatus").textContent=
+    $("childAccountStatus").textContent =
       "No child connected";
 
-    $("childEmail").textContent=
+
+    $("childEmail").textContent =
       "No child connected yet";
 
-    $("accountValue").textContent=
+
+    $("accountValue").textContent =
       "Waiting for child connection";
 
-    $("connectionBadge").textContent=
+
+    $("connectionBadge").textContent =
       "● WAITING";
 
-    $("connectionBadge").style.color=
+
+    $("connectionBadge").style.color =
       "#ffc857";
 
+
+    $("childDot").style.background =
+      "#718099";
+
+
+    $("childDot").style.boxShadow =
+      "none";
+
+
     return [];
+
   }
 
-  const child=connectedChildren[0];
 
-  const childEmail=
+  const child =
+    connectedChildren[0];
+
+
+  $("childAccountStatus").textContent =
+    "Connected child account";
+
+
+  $("childEmail").textContent =
     child.child_email ||
     "Connected child account";
 
-  $("childAccountStatus").textContent=
-    "Connected child account";
 
-  $("childEmail").textContent=
-    childEmail;
-
-  $("accountValue").textContent=
+  $("accountValue").textContent =
     child.verified
       ? "Verified connection"
       : "Connected · Pending verification";
 
-  $("connectionBadge").textContent=
+
+  $("connectionBadge").textContent =
     child.verified
       ? "● VERIFIED"
       : "● CONNECTED";
 
-  $("connectionBadge").style.color=
+
+  $("connectionBadge").style.color =
     child.verified
       ? "#63efb7"
       : "#ffc857";
 
+
+  $("childDot").style.background =
+    "#3be6a2";
+
+
+  $("childDot").style.boxShadow =
+    "0 0 14px rgba(59,230,162,.8)";
+
+
   return connectedChildren;
+
 }
 
 
 /* =========================================================
-   RESET EMERGENCY UI
+   RESET LOCATION
+========================================================= */
+
+function resetLocationUI(){
+
+  $("locationDot").style.background =
+    "#718099";
+
+
+  $("locationDot").style.boxShadow =
+    "none";
+
+
+  $("locationStatus").textContent =
+    "Waiting for shared location";
+
+
+  $("locationValue").textContent =
+    "Not shared";
+
+
+  $("mapTitle").textContent =
+    "Location not available";
+
+
+  $("mapDescription").textContent =
+    "No location has been shared yet.";
+
+
+  $("mapIcon").textContent =
+    "📍";
+
+}
+
+
+/* =========================================================
+   RESET EMERGENCY
 ========================================================= */
 
 function resetEmergencyUI(){
 
-  $("alertCard").classList.remove(
-    "emergency-active"
-  );
+  $("alertCard")
+    .classList
+    .remove("emergency-active");
 
-$("emergencyStatusCard").classList.remove(
-  "is-active"
-);
 
-  $("alertBadge").classList.remove(
-    "active"
-  );
+  $("emergencyStatusCard")
+    .classList
+    .remove("is-active");
 
-  $("alertBadge").textContent=
+
+  $("alertBadge")
+    .classList
+    .remove("active");
+
+
+  $("alertBadge").textContent =
     "MONITORING";
 
-  $("sosDot").style.background=
+
+  $("sosDot").style.background =
     "#718099";
 
-  $("sosDot").style.boxShadow=
+
+  $("sosDot").style.boxShadow =
     "none";
 
-  $("emergencyStatus").textContent=
+
+  $("emergencyStatus").textContent =
     "No active emergency";
 
-  $("alertBox").innerHTML=
+
+  $("alertBox").innerHTML =
     "No active emergency alerts.";
+
+
+  resetLocationUI();
 
 }
 
 
 /* =========================================================
-   RENDER SOS ALERT
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(value){
+
+  return String(value ?? "")
+
+    .replace(/&/g,"&amp;")
+
+    .replace(/</g,"&lt;")
+
+    .replace(/>/g,"&gt;")
+
+    .replace(/"/g,"&quot;")
+
+    .replace(/'/g,"&#039;");
+
+}
+
+
+/* =========================================================
+   RENDER SOS
 ========================================================= */
 
 function renderSOSAlert(alert){
@@ -2292,70 +2496,82 @@ function renderSOSAlert(alert){
   }
 
 
-  $("alertCard").classList.add(
-    "emergency-active"
-  );
+  $("alertCard")
+    .classList
+    .add("emergency-active");
 
-$("emergencyStatusCard").classList.add(
-  "is-active"
-);
 
-  $("alertBadge").classList.add(
-    "active"
-  );
+  $("emergencyStatusCard")
+    .classList
+    .add("is-active");
 
-  $("alertBadge").textContent=
+
+  $("alertBadge")
+    .classList
+    .add("active");
+
+
+  $("alertBadge").textContent =
     "● ACTIVE SOS";
 
 
-  $("sosDot").style.background=
+  $("sosDot").style.background =
     "#ff476b";
 
-  $("sosDot").style.boxShadow=
+
+  $("sosDot").style.boxShadow =
     "0 0 18px rgba(255,71,107,.95)";
 
 
-  $("emergencyStatus").textContent=
+  $("emergencyStatus").textContent =
     "ACTIVE SOS ALERT";
 
 
-  const created=
+  const created =
     alert.created_at
+
       ? new Date(
           alert.created_at
         ).toLocaleString()
+
       : "Just now";
 
 
-  const childEmail=
+  const childEmail =
     alert.child_email ||
     "Connected child";
 
 
-  const latitude=
-    typeof alert.latitude==="number"
+  const latitude =
+    typeof alert.latitude === "number"
+
       ? alert.latitude.toFixed(6)
+
       : "Unavailable";
 
 
-  const longitude=
-    typeof alert.longitude==="number"
+  const longitude =
+    typeof alert.longitude === "number"
+
       ? alert.longitude.toFixed(6)
+
       : "Unavailable";
 
 
-  const hasCoordinates=
-    typeof alert.latitude==="number" &&
-    typeof alert.longitude==="number";
+  const hasCoordinates =
+    typeof alert.latitude === "number" &&
+    typeof alert.longitude === "number";
 
 
-  const mapLink=
+  const mapLink =
     hasCoordinates
+
       ? `https://www.google.com/maps?q=${alert.latitude},${alert.longitude}`
+
       : null;
 
 
-  $("alertBox").innerHTML=`
+  $("alertBox").innerHTML = `
 
     <div class="live-alert">
 
@@ -2372,7 +2588,7 @@ $("emergencyStatusCard").classList.add(
         </div>
 
         <span class="alert-time">
-          ${created}
+          ${escapeHtml(created)}
         </span>
 
       </div>
@@ -2415,9 +2631,11 @@ $("emergencyStatusCard").classList.add(
           </small>
 
           <strong style="color:#ff718d">
+
             ${escapeHtml(
               alert.status || "active"
             ).toUpperCase()}
+
           </strong>
 
         </div>
@@ -2441,15 +2659,20 @@ $("emergencyStatusCard").classList.add(
         <br>
 
         <span style="color:#8392a9">
+
           Coordinates:
           ${latitude},
           ${longitude}
+
         </span>
 
         ${
           mapLink
+
             ? `
+
               <br><br>
+
               <a
                 href="${mapLink}"
                 target="_blank"
@@ -2457,8 +2680,11 @@ $("emergencyStatusCard").classList.add(
               >
                 Open emergency location ↗
               </a>
+
             `
+
             : ""
+
         }
 
       </div>
@@ -2468,57 +2694,79 @@ $("emergencyStatusCard").classList.add(
   `;
 
 
-  /* Update location panel */
+  /* =======================================================
+     LOCATION UI
+  ======================================================= */
 
   if(hasCoordinates){
 
-    $("locationDot").style.background=
+    $("locationDot").style.background =
       "#3be6a2";
 
-    $("locationDot").style.boxShadow=
+
+    $("locationDot").style.boxShadow =
       "0 0 14px rgba(59,230,162,.8)";
 
-    $("locationStatus").textContent=
+
+    $("locationStatus").textContent =
       "Emergency location available";
 
-    $("locationValue").textContent=
+
+    $("locationValue").textContent =
       `${latitude}, ${longitude}`;
 
 
-    $("mapTitle").textContent=
+    $("mapTitle").textContent =
       "Emergency location available";
 
-    $("mapDescription").textContent=
+
+    $("mapDescription").textContent =
       `${latitude}, ${longitude}`;
 
-    $("mapIcon").textContent=
+
+    $("mapIcon").textContent =
+      "🚨";
+
+  }else{
+
+    $("locationDot").style.background =
+      "#ffc857";
+
+
+    $("locationDot").style.boxShadow =
+      "0 0 14px rgba(255,200,87,.7)";
+
+
+    $("locationStatus").textContent =
+      "SOS active · location unavailable";
+
+
+    $("locationValue").textContent =
+      "Unavailable";
+
+
+    $("mapTitle").textContent =
+      "SOS active";
+
+
+    $("mapDescription").textContent =
+      "Emergency alert received without GPS coordinates.";
+
+
+    $("mapIcon").textContent =
       "🚨";
 
   }
 
-  $("lastUpdate").textContent=
+
+  $("lastUpdate").textContent =
     created;
 
 }
 
 
 /* =========================================================
-   ESCAPE HTML
-========================================================= */
-
-function escapeHtml(value){
-
-  return String(value ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
-}
-
-
-/* =========================================================
-   LOAD LATEST SOS
+   LOAD ACTIVE SOS
 ========================================================= */
 
 async function loadLatestSOS(){
@@ -2528,12 +2776,17 @@ async function loadLatestSOS(){
     resetEmergencyUI();
 
     return;
+
   }
 
 
-  const childIds=
+  const childIds =
     connectedChildren
-      .map(child=>child.user_id)
+
+      .map(
+        child => child.user_id
+      )
+
       .filter(Boolean);
 
 
@@ -2542,12 +2795,15 @@ async function loadLatestSOS(){
     resetEmergencyUI();
 
     return;
+
   }
 
 
-  const {data,error}=
+  const {data,error} =
     await window.supabaseClient
+
       .from("safety_alerts")
+
       .select(`
         id,
         child_user_id,
@@ -2560,18 +2816,24 @@ async function loadLatestSOS(){
         created_at,
         resolved_at
       `)
+
       .in(
         "child_user_id",
         childIds
       )
+
       .eq(
         "status",
         "active"
       )
+
       .order(
         "created_at",
-        {ascending:false}
+        {
+          ascending:false
+        }
       )
+
       .limit(1);
 
 
@@ -2582,47 +2844,78 @@ async function loadLatestSOS(){
       error
     );
 
-    $("alertBox").textContent=
-      "Emergency monitoring temporarily unavailable.";
+
+    $("alertBox").innerHTML = `
+
+      <div style="
+        padding:18px;
+        border-radius:14px;
+        background:rgba(255,77,107,.06);
+        border:1px solid rgba(255,77,107,.12);
+        color:#ffb5c2;
+      ">
+
+        Emergency monitoring temporarily unavailable.
+
+        <br><br>
+
+        <small style="color:#8796af">
+          ${escapeHtml(error.message)}
+        </small>
+
+      </div>
+
+    `;
 
     return;
+
   }
 
 
-  const alert=
+  const alert =
     data && data.length
       ? data[0]
       : null;
 
 
   renderSOSAlert(alert);
+
 }
 
+
 /* =========================================================
-   STATUS CARD NAVIGATION
+   CARD NAVIGATION
 ========================================================= */
 
-function scrollToSection(elementId, message){
+function scrollToSection(
+  elementId,
+  message
+){
 
-  const element=$(elementId);
+  const element =
+    $(elementId);
+
 
   if(!element) return;
 
+
   element.scrollIntoView({
+
     behavior:"smooth",
+
     block:"start"
+
   });
 
+
   if(message){
+
     toast(message);
+
   }
 
 }
 
-
-/* =========================================================
-   CHILD ACCOUNT CARD
-========================================================= */
 
 function openChildAccount(){
 
@@ -2634,10 +2927,6 @@ function openChildAccount(){
 }
 
 
-/* =========================================================
-   LOCATION CARD
-========================================================= */
-
 function openChildLocation(){
 
   scrollToSection(
@@ -2647,10 +2936,6 @@ function openChildLocation(){
 
 }
 
-
-/* =========================================================
-   EMERGENCY CARD
-========================================================= */
 
 function openEmergencyAlerts(){
 
@@ -2663,25 +2948,30 @@ function openEmergencyAlerts(){
 
 
 /* =========================================================
-   CLICK + KEYBOARD SUPPORT
+   CARD ACCESSIBILITY
 ========================================================= */
 
-function activateCard(element, callback){
+function activateCard(
+  element,
+  callback
+){
 
   if(!element) return;
+
 
   element.addEventListener(
     "click",
     callback
   );
 
+
   element.addEventListener(
     "keydown",
-    function(event){
+    event => {
 
       if(
-        event.key==="Enter" ||
-        event.key===" "
+        event.key === "Enter" ||
+        event.key === " "
       ){
 
         event.preventDefault();
@@ -2696,33 +2986,35 @@ function activateCard(element, callback){
 }
 
 
-/* =========================================================
-   REGISTER STATUS CARDS
-========================================================= */
-
 activateCard(
   $("childStatusCard"),
   openChildAccount
 );
+
 
 activateCard(
   $("locationStatusCard"),
   openChildLocation
 );
 
+
 activateCard(
   $("emergencyStatusCard"),
   openEmergencyAlerts
 );
 
+
 /* =========================================================
-   LOAD EVERYTHING
+   DASHBOARD REFRESH
 ========================================================= */
 
 async function refreshDashboard(user){
 
-  const children=
-    await loadConnectedChildren(user);
+  const children =
+    await loadConnectedChildren(
+      user
+    );
+
 
   if(children.length){
 
@@ -2733,46 +3025,9 @@ async function refreshDashboard(user){
     resetEmergencyUI();
 
   }
+
 }
 
-
-/* =========================================================
-   LOGOUT
-========================================================= */
-
-$("logoutBtn").addEventListener(
-  "click",
-  async function(){
-
-    try{
-
-      if(window.supabaseClient){
-
-        await window.supabaseClient.auth.signOut();
-
-      }
-
-    }catch(error){
-
-      console.error(
-        "SafeGuard logout error:",
-        error
-      );
-
-    }finally{
-
-      localStorage.removeItem(
-        "safeguard_role"
-      );
-
-      window.location.replace(
-        "index.html"
-      );
-
-    }
-
-  }
-);
 
 /* =========================================================
    MANUAL REFRESH
@@ -2780,39 +3035,84 @@ $("logoutBtn").addEventListener(
 
 async function manualRefresh(){
 
-  const button=$("refreshBtn");
-  const icon=$("refreshIcon");
+  const button =
+    $("refreshBtn");
+
+
+  const icon =
+    $("refreshIcon");
+
 
   if(!button) return;
 
-  button.disabled=true;
-  button.classList.add("loading");
-  button.classList.remove("success");
 
-  icon.textContent="↻";
+  button.disabled = true;
+
+  button.classList.add(
+    "loading"
+  );
+
+  button.classList.remove(
+    "success"
+  );
+
+
+  icon.textContent =
+    "↻";
+
 
   try{
 
-    const user=await getCurrentUser();
+    const user =
+      await getCurrentUser();
+
 
     if(!user){
-      window.location.replace("index.html");
+
+      window.location.replace(
+        "index.html"
+      );
+
       return;
+
     }
 
-    await refreshDashboard(user);
 
-    button.classList.remove("loading");
-    button.classList.add("success");
+    await refreshDashboard(
+      user
+    );
 
-    icon.textContent="✓";
 
-    toast("Dashboard refreshed successfully.");
+    button.classList.remove(
+      "loading"
+    );
 
-    setTimeout(()=>{
-      button.classList.remove("success");
-      icon.textContent="↻";
+
+    button.classList.add(
+      "success"
+    );
+
+
+    icon.textContent =
+      "✓";
+
+
+    toast(
+      "Dashboard refreshed successfully."
+    );
+
+
+    setTimeout(() => {
+
+      button.classList.remove(
+        "success"
+      );
+
+      icon.textContent =
+        "↻";
+
     },1800);
+
 
   }catch(error){
 
@@ -2821,29 +3121,91 @@ async function manualRefresh(){
       error
     );
 
-    button.classList.remove("loading");
 
-    icon.textContent="!";
+    button.classList.remove(
+      "loading"
+    );
 
-    toast("Refresh failed. Please try again.");
 
-    setTimeout(()=>{
-      icon.textContent="↻";
+    icon.textContent =
+      "!";
+
+
+    toast(
+      "Refresh failed. Please try again."
+    );
+
+
+    setTimeout(() => {
+
+      icon.textContent =
+        "↻";
+
     },1800);
+
 
   }finally{
 
-    button.disabled=false;
+    button.disabled = false;
 
   }
 
 }
 
 
-$("refreshBtn").addEventListener(
-  "click",
-  manualRefresh
-);
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+$("logoutBtn")
+  .addEventListener(
+    "click",
+    async () => {
+
+      try{
+
+        if(window.supabaseClient){
+
+          await window.supabaseClient
+            .auth
+            .signOut();
+
+        }
+
+      }catch(error){
+
+        console.error(
+          "SafeGuard logout error:",
+          error
+        );
+
+      }finally{
+
+        localStorage.removeItem(
+          "safeguard_role"
+        );
+
+
+        window.location.replace(
+          "index.html"
+        );
+
+      }
+
+    }
+  );
+
+
+/* =========================================================
+   REFRESH BUTTON
+========================================================= */
+
+$("refreshBtn")
+  .addEventListener(
+    "click",
+    manualRefresh
+  );
+
 
 /* =========================================================
    INITIALIZE
@@ -2851,26 +3213,35 @@ $("refreshBtn").addEventListener(
 
 (async function(){
 
-  const user=
+  const user =
     await checkParentAccess();
+
 
   if(!user) return;
 
 
-  renderParentAccount(user);
+  renderParentAccount(
+    user
+  );
 
 
-  await refreshDashboard(user);
+  await refreshDashboard(
+    user
+  );
 
 
-  /* Automatic emergency monitoring */
+  /* =======================================================
+     LIVE MONITORING
+  ======================================================= */
 
   setInterval(
-    async function(){
+    async () => {
 
       try{
 
-        await refreshDashboard(user);
+        await refreshDashboard(
+          user
+        );
 
       }catch(error){
 
@@ -2884,7 +3255,7 @@ $("refreshBtn").addEventListener(
     },
     4000
   );
-
+  
 })();
 </script>
 
