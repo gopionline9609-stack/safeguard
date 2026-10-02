@@ -245,6 +245,42 @@ body:before{
    PREMIUM REFRESH BUTTON
 ========================================================= */
 
+/* =========================================================
+   LIVE CLOCK + LOCATION PULSE
+========================================================= */
+.parent-live-clock{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:8px 11px;
+  border:1px solid rgba(54,229,255,.16);
+  border-radius:12px;
+  background:linear-gradient(135deg,rgba(54,229,255,.08),rgba(141,108,255,.08));
+  color:#dff9ff;
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.04em;
+  box-shadow:0 8px 25px rgba(0,0,0,.12);
+  white-space:nowrap;
+}
+.parent-live-clock .clock-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 10px rgba(59,230,162,.8);
+  animation:clockPulse 1.8s ease-in-out infinite;
+}
+@keyframes clockPulse{0%,100%{transform:scale(1);opacity:.72}50%{transform:scale(1.35);opacity:1}}
+.location-card.is-live-location{
+  border-color:rgba(59,230,162,.34)!important;
+  box-shadow:0 18px 55px rgba(59,230,162,.08),0 0 0 1px rgba(59,230,162,.06) inset;
+}
+.location-card.is-live-location .map-icon{
+  animation:locationPulse 1.8s ease-in-out infinite;
+}
+@keyframes locationPulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(59,230,162,0))}50%{transform:scale(1.08);filter:drop-shadow(0 0 14px rgba(59,230,162,.35))}}
+
 .refresh-btn{
   display:inline-flex;
   align-items:center;
@@ -1611,6 +1647,56 @@ body:before{
   }
 }
 
+
+/* =========================================================
+   EMERGENCY COMMAND CENTER POLISH
+========================================================= */
+.command-readout{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:20px;
+}
+.command-chip{
+  position:relative;
+  min-height:62px;
+  padding:12px 13px;
+  border:1px solid rgba(130,175,235,.12);
+  border-radius:15px;
+  background:linear-gradient(145deg,rgba(16,28,52,.62),rgba(4,10,22,.52));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 12px 35px rgba(0,0,0,.16);
+  overflow:hidden;
+}
+.command-chip:before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 20%,rgba(255,255,255,.035) 50%,transparent 70%);
+  transform:translateX(-130%);animation:commandSheen 8s ease-in-out infinite;
+}
+@keyframes commandSheen{0%,65%,100%{transform:translateX(-130%)}78%{transform:translateX(130%)}}
+.command-chip small{display:block;color:#6f829d;font-size:8px;font-weight:850;letter-spacing:1px;margin-bottom:6px}
+.command-chip strong{display:block;color:#eaf7ff;font-size:11px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.command-chip.live strong{color:#9ff6d5}
+.command-chip.alert strong{color:#ffd0d9}
+.command-chip.live{border-color:rgba(59,230,162,.20);box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 0 26px rgba(59,230,162,.05)}
+.command-chip.alert{border-color:rgba(255,71,107,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 0 30px rgba(255,71,107,.08)}
+.command-chip.neutral{border-color:rgba(54,229,255,.18)}
+
+.alert-card.is-command-active{
+  border-color:rgba(255,71,107,.45);
+  box-shadow:0 28px 95px rgba(0,0,0,.42),0 0 60px rgba(255,55,85,.14),inset 0 0 30px rgba(255,40,70,.025);
+  animation:commandAlertGlow 2.2s ease-in-out infinite;
+}
+@keyframes commandAlertGlow{50%{box-shadow:0 30px 100px rgba(0,0,0,.46),0 0 82px rgba(255,55,85,.22),inset 0 0 35px rgba(255,40,70,.04)}}
+.alert-empty.active{position:relative;overflow:hidden}
+.alert-empty.active:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(#ff476b,#ff9baf);box-shadow:0 0 18px rgba(255,71,107,.8)}
+
+@media(max-width:900px){.command-readout{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){
+  .command-readout{grid-template-columns:1fr 1fr;gap:8px}
+  .command-chip{min-height:58px;padding:10px}
+  .command-chip strong{font-size:10px}
+}
+
 @media(prefers-reduced-motion:reduce){
 
   *,
@@ -2127,6 +2213,11 @@ body:before{
     ● SECURE SESSION
   </span>
 
+  <span class="parent-live-clock" aria-live="polite">
+    <i class="clock-dot"></i>
+    <span id="parentLiveClock">--:--:--</span>
+  </span>
+
   <button
     class="refresh-btn"
     id="refreshBtn"
@@ -2169,6 +2260,25 @@ body:before{
     shared emergency activity and safety status
     from one secure command center.
   </p>
+
+  <div class="command-readout" aria-live="polite">
+    <div class="command-chip" id="commandIncidentChip">
+      <small>INCIDENT</small>
+      <strong id="commandIncident">NO ACTIVE SOS</strong>
+    </div>
+    <div class="command-chip" id="commandCameraChip">
+      <small>LIVE CAMERA</small>
+      <strong id="commandCamera">STANDBY</strong>
+    </div>
+    <div class="command-chip" id="commandLocationChip">
+      <small>LOCATION</small>
+      <strong id="commandLocation">WAITING FOR GPS</strong>
+    </div>
+    <div class="command-chip neutral" id="commandChildChip">
+      <small>CONNECTED CHILD</small>
+      <strong id="commandChild">WAITING FOR ACCOUNT</strong>
+    </div>
+  </div>
 
 </section>
 
@@ -2399,13 +2509,8 @@ body:before{
 
   <div class="parent-camera-shell">
 
-    <video
-      id="parentCameraVideo"
-      autoplay
-      playsinline
-      muted
-    ></video>
-
+  
+    
 
     <div class="parent-camera-overlay"></div>
 
@@ -2686,6 +2791,19 @@ async function checkParentAccess(){
   return user;
 }
 
+function startParentLiveClock(){
+  const clock=$("parentLiveClock");
+  if(!clock) return;
+
+  const update=()=>{
+    const now=new Date();
+    clock.textContent=now.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  };
+
+  update();
+  setInterval(update,1000);
+}
+
 function renderParentAccount(user){
   const email = $("parentEmail");
   if(email) email.textContent = user?.email || "Signed-in guardian";
@@ -2710,18 +2828,25 @@ function setEmergencyVisual(active){
 function renderLocation(alert){
   const lat=Number(alert?.latitude), lon=Number(alert?.longitude), hasCoords=Number.isFinite(lat)&&Number.isFinite(lon);
   const address=alert?.address&&alert.address!=="Location unavailable"?String(alert.address):null;
-  const locationStatus=$("locationStatus"), locationDot=$("locationDot"), locationValue=$("locationValue"), mapTitle=$("mapTitle"), mapDescription=$("mapDescription"), openMapLink=$("openMapLink");
+  const locationCard=$("locationCardSection"), locationStatus=$("locationStatus"), locationDot=$("locationDot"), locationValue=$("locationValue"), mapTitle=$("mapTitle"), mapDescription=$("mapDescription"), openMapLink=$("openMapLink");
+  const commandLocation=$("commandLocation"), commandLocationChip=$("commandLocationChip");
   if(hasCoords){
+    if(locationCard) locationCard.classList.add("is-live-location");
     const coords=`${lat.toFixed(6)}, ${lon.toFixed(6)}`;
     const mapsUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lon}`)}`;
     if(locationStatus)locationStatus.textContent=address?"Live emergency location shared":`GPS: ${coords}`;
+    if(commandLocation)commandLocation.textContent=address ? "LIVE • ADDRESS SHARED" : "LIVE • GPS SHARED";
+    if(commandLocationChip)commandLocationChip.classList.add("live");
     if(locationDot){locationDot.style.background="#4df0a7";locationDot.style.boxShadow="0 0 12px rgba(77,240,167,.75)";}
     if(locationValue)locationValue.textContent=address||coords;
     if(mapTitle)mapTitle.textContent=address||coords;
     if(mapDescription)mapDescription.textContent=`GPS coordinates: ${coords}`;
     if(openMapLink){openMapLink.href=mapsUrl;openMapLink.hidden=false;}
   }else{
+    if(locationCard) locationCard.classList.remove("is-live-location");
     if(locationStatus)locationStatus.textContent="Waiting for shared location";
+    if(commandLocation)commandLocation.textContent="WAITING FOR GPS";
+    if(commandLocationChip)commandLocationChip.classList.remove("live");
     if(locationDot){locationDot.style.background="#718099";locationDot.style.boxShadow="none";}
     if(locationValue)locationValue.textContent="Not shared";
     if(mapTitle)mapTitle.textContent="Location not available";
@@ -2737,6 +2862,11 @@ function renderEmergencyAlert(alert){
 
   const status = $("emergencyStatus");
   const box = $("alertBox");
+  const alertCard = $("alertCard");
+  const commandIncident = $("commandIncident");
+  const commandIncidentChip = $("commandIncidentChip");
+  const commandChild = $("commandChild");
+  const commandChildChip = $("commandChildChip");
   const accountValue = $("accountValue");
   const cameraValue = $("cameraValue");
   const lastUpdate = $("lastUpdate");
@@ -2744,6 +2874,11 @@ function renderEmergencyAlert(alert){
   const connectionBadge = $("connectionBadge");
 
   if(active){
+    if(alertCard) alertCard.classList.add("is-command-active");
+    if(commandIncident) commandIncident.textContent = "🚨 SOS ACTIVE";
+    if(commandIncidentChip) commandIncidentChip.classList.add("alert");
+    if(commandChild) commandChild.textContent = alert.child_email || "CONNECTED CHILD";
+    if(commandChildChip) commandChildChip.classList.add("neutral");
     if(status) status.textContent = "🚨 SOS ACTIVE — emergency camera requested";
     if(box){
       const time = alert.created_at ? new Date(alert.created_at).toLocaleString() : "now";
@@ -2756,6 +2891,10 @@ function renderEmergencyAlert(alert){
     if(lastUpdate) lastUpdate.textContent = alert.created_at ? new Date(alert.created_at).toLocaleTimeString() : "Now";
     if(connectionBadge) connectionBadge.textContent = "● EMERGENCY ACTIVE";
   }else if(alert){
+    if(alertCard) alertCard.classList.remove("is-command-active");
+    if(commandIncident) commandIncident.textContent = `LAST EVENT: ${(alert.status || "RECORDED").toUpperCase()}`;
+    if(commandIncidentChip) commandIncidentChip.classList.remove("alert");
+    if(commandChild) commandChild.textContent = alert.child_email || "CONNECTED CHILD";
     if(status) status.textContent = `Last emergency: ${alert.status || "recorded"}`;
     if(box){
       const time = alert.created_at ? new Date(alert.created_at).toLocaleString() : "Unknown time";
@@ -2767,6 +2906,10 @@ function renderEmergencyAlert(alert){
     if(lastUpdate) lastUpdate.textContent = alert.created_at ? new Date(alert.created_at).toLocaleTimeString() : "—";
     if(connectionBadge) connectionBadge.textContent = "● SYSTEM READY";
   }else{
+    if(alertCard) alertCard.classList.remove("is-command-active");
+    if(commandIncident) commandIncident.textContent = "NO ACTIVE SOS";
+    if(commandIncidentChip) commandIncidentChip.classList.remove("alert");
+    if(commandChild) commandChild.textContent = connectedChildren[0]?.child_email || "WAITING FOR ACCOUNT";
     if(status) status.textContent = "No active emergency";
     if(box){
       box.textContent = "No emergency activity found.";
@@ -2806,6 +2949,8 @@ async function loadConnectedChildren(user){
   });
 
   const child = connectedChildren[0];
+  const commandChild = $("commandChild");
+  if(commandChild) commandChild.textContent = child?.child_email || "WAITING FOR ACCOUNT";
   const childEmail = $("childEmail");
   const status = $("childAccountStatus");
   const childDot = $("childDot");
@@ -2924,6 +3069,8 @@ function setParentCameraStatus(
 
   const connection = $("parentCameraConnection");
   const quality = $("parentCameraQuality");
+  const commandCamera = $("commandCamera");
+  const commandCameraChip = $("commandCameraChip");
 
   if(!card) return;
 
@@ -2950,6 +3097,8 @@ function setParentCameraStatus(
 
     quality.textContent =
       "Secure WebRTC stream";
+    if(commandCamera) commandCamera.textContent = "● LIVE • WEBRTC";
+    if(commandCameraChip) commandCameraChip.classList.add("live");
 
     $("parentCameraTime").textContent =
       new Date().toLocaleTimeString();
@@ -2971,6 +3120,8 @@ function setParentCameraStatus(
 
     quality.textContent =
       "Negotiating WebRTC…";
+    if(commandCamera) commandCamera.textContent = "CONNECTING…";
+    if(commandCameraChip) commandCameraChip.classList.remove("live");
 
   }
 
@@ -2989,6 +3140,8 @@ function setParentCameraStatus(
 
     quality.textContent =
       "Connection unavailable";
+    if(commandCamera) commandCamera.textContent = "CAMERA ERROR";
+    if(commandCameraChip) commandCameraChip.classList.remove("live");
 
   }
 
@@ -3003,6 +3156,8 @@ function setParentCameraStatus(
 
     quality.textContent =
       "Waiting for child camera";
+    if(commandCamera) commandCamera.textContent = "STANDBY";
+    if(commandCameraChip) commandCameraChip.classList.remove("live");
 
   }
 
@@ -3034,7 +3189,32 @@ function clearParentCameraVideo(){
   video.srcObject = null;
 
 }
+parentPeer.ontrack = (event) => {
 
+  const video = document.getElementById(
+    "parentCameraVideo"
+  );
+
+  if (!video) return;
+
+  if (event.streams && event.streams[0]) {
+
+    video.srcObject = event.streams[0];
+
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = false;
+
+    video.play().catch(err => {
+      console.warn(
+        "Parent camera autoplay:",
+        err
+      );
+    });
+
+  }
+
+};
 
 /* =========================================================
    CLOSE PEER
@@ -3426,17 +3606,16 @@ async function handleChildCameraOffer(
     return;
 
 
-  if(
-    payload.sessionId !==
-    parentCameraSessionId
-  ){
-
-    console.warn(
-      "Ignoring offer from old session"
-    );
-
+  if(!parentCameraSessionId){
+    if(payload.emergency === true && payload.childId === parentCameraChildId){
+      parentCameraSessionId = payload.sessionId;
+    }else{
+      console.warn("Ignoring camera offer without an active session");
+      return;
+    }
+  }else if(payload.sessionId !== parentCameraSessionId){
+    console.warn("Ignoring offer from old session");
     return;
-
   }
 
 
@@ -3675,7 +3854,9 @@ function handleChildCameraState(
 
   if(
     payload.state ===
-    "ready"
+    "ready" ||
+    payload.state ===
+    "emergency-live"
   ){
 
     setParentCameraStatus(
@@ -3846,7 +4027,11 @@ async function requestChildCamera(options = {}){
       {
 
         sessionId:
-          parentCameraSessionId
+          parentCameraSessionId,
+
+        emergency: options.force === true,
+
+        alertId: options.alertId || activeEmergencyAlert?.id || null
 
       }
 
@@ -3864,24 +4049,23 @@ async function requestChildCamera(options = {}){
       "The parent could not contact the child camera."
 
     );
+
+    if(button){
+      button.disabled = false;
+      button.innerHTML = "<span>◉</span> Request Live Camera";
+    }
+
     return false;
   }
 
-  return true;
-
-
   setTimeout(() => {
-
     if(button){
-
       button.disabled = false;
-
-      button.innerHTML =
-        "<span>◉</span> Request Live Camera";
-
+      button.innerHTML = "<span>◉</span> Request Live Camera";
     }
-
   },1800);
+
+  return true;
 
 }
 
@@ -4329,6 +4513,8 @@ activateCard(
 /* =========================================================
    DASHBOARD REFRESH
 ========================================================= */
+
+startParentLiveClock();
 
 async function setupSafetyAlertRealtime(){
   if(!window.supabaseClient||!parentUser||safetyAlertChannel)return;
